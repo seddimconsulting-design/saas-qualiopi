@@ -123,7 +123,7 @@ export default function App() {
   /* data */
   const [sessions, setSessions] = useState([
     { id: 's1', title: 'Développement Web Next.js', trainer: 'Guillaume S.', start: '2026-07-10', end: '2026-07-12', duration: '14h', status: 'Projet', trainees: 5, handicap: true, handicapNote: 'Supports en gros caractères pour Laurence Martin.', price: 2800, modality: 'Présentiel', docs: { convention: false, positioning: false, attendance: false, certificate: false } },
-    { id: 's2', title: "S'installer et pérenniser son OF", trainer: 'Thomas M.', start: '2026-06-15', end: '2026-06-18', duration: '21h', status: 'Actif', trainees: 8, handicap: false, handicapNote: '', price: 4200, modality: 'Présentiel', docs: { convention: true, positioning: true, attendance: false, certificate: false } },
+    { id: 's2', title: "S&apos;installer et pérenniser son OF", trainer: 'Thomas M.', start: '2026-06-15', end: '2026-06-18', duration: '21h', status: 'Actif', trainees: 8, handicap: false, handicapNote: '', price: 4200, modality: 'Présentiel', docs: { convention: true, positioning: true, attendance: false, certificate: false } },
     { id: 's3', title: 'RGPD & Gestion des données', trainer: 'Marie D.', start: '2026-05-01', end: '2026-05-02', duration: '7h', status: 'Terminé', trainees: 4, handicap: false, handicapNote: '', price: 1400, modality: 'Distanciel', docs: { convention: true, positioning: true, attendance: true, certificate: true } },
   ]);
 
