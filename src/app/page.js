@@ -9,6 +9,7 @@ import {
   BookOpen, Shield, Award, X, Filter, Search, Download,
   ArrowUpRight, ArrowDownRight, Minus, Upload
 } from 'lucide-react';
+import { TEMPLATES } from '@/lib/doc-templates';
 
 /* ─── helpers ─── */
 const cls = (...args) => args.filter(Boolean).join(' ');
@@ -413,6 +414,7 @@ export default function App() {
     { key: 'indicateurs',  icon: Shield,          label: '32 Indicateurs' },
     { key: 'copilote',     icon: ClipboardList,   label: 'Copilote IA', badge: gaps.length },
     { key: 'preuves',      icon: Award,           label: 'Preuves IA' },
+    { key: 'documents',    icon: FileText,        label: 'Documents types' },
     { key: 'crm',          icon: Building2,       label: 'CRM' },
     { key: 'facturation',  icon: Euro,            label: 'Devis & Facturation' },
   ];
@@ -1209,6 +1211,31 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ DOCUMENTS TYPES ══════════════ */}
+          {tab === 'documents' && (
+            <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h3 className="text-xs font-extrabold text-slate-900">Bibliothèque de modèles conformes</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi — téléchargeables en PDF et Word, à personnaliser.</p>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {TEMPLATES.map(tpl => (
+                  <div key={tpl.id} className="px-6 py-3.5 flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-slate-400" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-900">{tpl.title}</p>
+                      <p className="text-[10px] text-slate-400">Ind. {tpl.indicator} — {indLabel(tpl.indicator)}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a href={`/api/document/${tpl.id}?format=pdf`} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}><Download className="w-3.5 h-3.5" /> PDF</a>
+                      <a href={`/api/document/${tpl.id}?format=docx`} className={cls(btn, 'bg-indigo-600 text-white hover:bg-indigo-700')}><Download className="w-3.5 h-3.5" /> Word</a>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

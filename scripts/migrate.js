@@ -9,7 +9,8 @@ const { Client } = require('pg');
   const url = process.env.DATABASE_URL;
   if (!url) { console.error('DATABASE_URL manquant (.env.local)'); process.exit(1); }
   const sql = fs.readFileSync(path.join(__dirname, '..', 'database', 'app_schema.sql'), 'utf8');
-  const client = new Client({ connectionString: url });
+  const isLocal = /localhost|127\.0\.0\.1/.test(url);
+  const client = new Client({ connectionString: url, ssl: isLocal ? false : { rejectUnauthorized: false } });
   try {
     await client.connect();
     await client.query(sql);
