@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   GraduationCap, LayoutDashboard, Users, Rss, MessageSquareWarning,
   CheckSquare, Plus, FileText, Trash2, AlertTriangle, CheckCircle2,
   Save, ChevronRight, TrendingUp, BarChart3, Euro, Calendar,
   Clock, Star, Building2, CreditCard, ClipboardList, Bell,
   BookOpen, Shield, Award, X, Filter, Search, Download,
-  ArrowUpRight, ArrowDownRight, Minus
+  ArrowUpRight, ArrowDownRight, Minus, Upload
 } from 'lucide-react';
 
 /* ─── helpers ─── */
@@ -111,6 +111,86 @@ const CRITERES_LABELS = {
   7: "Processus qualité",
 };
 
+/* ─── statuts & moteur de preuve ─── */
+const IND_STATUS = {
+  conforme: { label: 'Conforme', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  partiel:  { label: 'Partiel',  badge: 'bg-amber-50 text-amber-700 border-amber-100',       dot: 'bg-amber-400' },
+  manquant: { label: 'Manquant', badge: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-400' },
+};
+const STATUS_WEIGHT = { conforme: 1, partiel: 0.5, manquant: 0 };
+const IND_TAB = { 4:'sessions',8:'sessions',9:'sessions',10:'sessions',13:'satisfaction',14:'satisfaction',15:'satisfaction',16:'indicateurs',18:'sessions',23:'veilles',24:'veilles',25:'sessions',29:'satisfaction',30:'reclamations',31:'pac',32:'pac' };
+
+const mk = (status, evidence = [], gaps = []) => ({ status, evidence, gaps });
+
+/* Règles déterministes : chaque indicateur dérive son statut des données réelles. */
+function buildIndicators(d, manual = {}) {
+  const { sessions, trainees, veilles, reclamations, pac } = d;
+  const n = sessions.length;
+  const tN = trainees.length;
+  const rate = (a, b) => (b === 0 ? 0 : a / b);
+  const tri = (r, ev, gap) => (r >= 1 ? mk('conforme', ev) : r > 0 ? mk('partiel', ev, [gap]) : mk('manquant', [], [gap]));
+
+  const withPos = sessions.filter(s => s.docs?.positioning).length;
+  const withCert = sessions.filter(s => s.docs?.certificate).length;
+  const withTrainer = sessions.filter(s => s.trainer).length;
+  const totalDocs = sessions.reduce((a, s) => a + (s.docs ? Object.values(s.docs).filter(Boolean).length : 0), 0);
+  const maxDocs = n * 4;
+  const hot = trainees.filter(t => t.satHot).length;
+  const cold = trainees.filter(t => t.satCold).length;
+  const sHandi = sessions.filter(s => s.handicap);
+  const handiNoNote = sHandi.filter(s => !s.handicapNote);
+  const openRec = reclamations.filter(r => r.status !== 'Résolue');
+  const pacDone = pac.filter(p => p.status === 'Terminé');
+
+  const RULES = {
+    4: () => (sHandi.length === 0
+        ? mk('partiel', [], ['Désigner un référent handicap et formaliser la procédure'])
+        : handiNoNote.length > 0
+          ? mk('partiel', [`${sHandi.length - handiNoNote.length}/${sHandi.length} session(s) handicap documentée(s)`], [`${handiNoNote.length} session(s) handicap sans note d'aménagement`])
+          : mk('conforme', [`Aménagements documentés (${sHandi.length} session(s))`])),
+    8: () => tri(rate(withPos, n), [`${withPos}/${n} sessions avec positionnement amont`], 'Ajouter le test de positionnement aux sessions manquantes'),
+    9: () => tri(rate(totalDocs, maxDocs), [`Traçabilité des acquis : ${totalDocs}/${maxDocs} documents`], 'Compléter les évaluations et émargements'),
+    10: () => tri(rate(withCert, n), [`${withCert}/${n} sessions avec certificat de réalisation`], 'Émettre les certificats de réalisation manquants'),
+    13: () => tri(rate(hot, tN), [`${hot}/${tN} évaluations à chaud recueillies`], 'Collecter la satisfaction à chaud manquante'),
+    14: () => tri(rate(cold, tN), [`${cold}/${tN} évaluations à froid recueillies`], 'Lancer les enquêtes à froid (J+90)'),
+    15: () => (pac.length > 0
+        ? mk('conforme', ["Résultats exploités via le plan d'amélioration"])
+        : mk('partiel', [], ["Analyser les évaluations dans le plan d'amélioration"])),
+    16: () => (withCert > 0
+        ? mk('conforme', ['Taux de réussite calculables et publiables'])
+        : mk('partiel', [], ["Aucun résultat à communiquer pour l'instant"])),
+    18: () => tri(rate(withTrainer, n), [`${withTrainer}/${n} sessions avec formateur assigné`], 'Assigner et documenter un formateur qualifié'),
+    23: () => (veilles.length > 0
+        ? mk('conforme', [`${veilles.length} veille(s) enregistrée(s)`])
+        : mk('manquant', [], ['Enregistrer au moins une veille réglementaire'])),
+    24: () => (veilles.some(v => v.exploit)
+        ? mk('conforme', ['Veilles exploitées et tracées'])
+        : veilles.length > 0 ? mk('partiel', [], ["Documenter l'exploitation des veilles"]) : mk('manquant', [], ['Aucune veille exploitée'])),
+    25: () => tri(rate(totalDocs, maxDocs), [`Dossiers de session : ${totalDocs}/${maxDocs} documents`], 'Compléter les documents de traçabilité'),
+    29: () => (hot > 0 || cold > 0
+        ? mk('conforme', [`Satisfaction mesurée (${hot + cold} retours)`])
+        : mk('manquant', [], ['Mesurer la satisfaction des parties prenantes'])),
+    30: () => (reclamations.length === 0
+        ? mk('partiel', [], ['Mettre en place le registre des réclamations'])
+        : openRec.length > 0
+          ? mk('partiel', [`${reclamations.length - openRec.length} réclamation(s) traitée(s)`], [`${openRec.length} réclamation(s) ouverte(s) à traiter`])
+          : mk('conforme', [`${reclamations.length} réclamation(s) traitée(s)`])),
+    31: () => (pac.length > 0
+        ? mk('conforme', [`${pac.length} action(s) de non-conformité suivie(s)`])
+        : mk('manquant', [], ['Ouvrir le registre des non-conformités'])),
+    32: () => (pacDone.length > 0
+        ? mk('conforme', [`${pacDone.length} action(s) d'amélioration finalisée(s)`])
+        : pac.length > 0 ? mk('partiel', [], ["Finaliser les actions du plan d'amélioration"]) : mk('manquant', [], ['Initier le plan d\'amélioration continue'])),
+  };
+
+  return INDICATEURS.map(meta => {
+    const r = RULES[meta.id];
+    if (r) return { ...meta, ...r(), auto: true };
+    const status = manual[meta.id] || (meta.ok ? 'conforme' : 'manquant');
+    return { ...meta, status, evidence: [], gaps: status === 'conforme' ? [] : ['À documenter manuellement'], auto: false };
+  });
+}
+
 /* ──────────── APP ──────────── */
 export default function App() {
   const [tab, setTab] = useState('dashboard');
@@ -120,40 +200,51 @@ export default function App() {
   /* modals */
   const [modal, setModal] = useState(null); // 'session'|'trainee'|'veille'|'rec'|'pac'|'client'|'devis'|'satisfaction'
 
-  /* data */
-  const [sessions, setSessions] = useState([
-    { id: 's1', title: 'Développement Web Next.js', trainer: 'Guillaume S.', start: '2026-07-10', end: '2026-07-12', duration: '14h', status: 'Projet', trainees: 5, handicap: true, handicapNote: 'Supports en gros caractères pour Laurence Martin.', price: 2800, modality: 'Présentiel', docs: { convention: false, positioning: false, attendance: false, certificate: false } },
-    { id: 's2', title: "S&apos;installer et pérenniser son OF", trainer: 'Thomas M.', start: '2026-06-15', end: '2026-06-18', duration: '21h', status: 'Actif', trainees: 8, handicap: false, handicapNote: '', price: 4200, modality: 'Présentiel', docs: { convention: true, positioning: true, attendance: false, certificate: false } },
-    { id: 's3', title: 'RGPD & Gestion des données', trainer: 'Marie D.', start: '2026-05-01', end: '2026-05-02', duration: '7h', status: 'Terminé', trainees: 4, handicap: false, handicapNote: '', price: 1400, modality: 'Distanciel', docs: { convention: true, positioning: true, attendance: true, certificate: true } },
-  ]);
+  /* data — chargée depuis PostgreSQL via /api/bootstrap */
+  const [sessions, setSessions] = useState([]);
+  const [trainees, setTrainees] = useState([]);
+  const [veilles, setVeilles] = useState([]);
+  const [reclamations, setReclamations] = useState([]);
+  const [pac, setPac] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [devis, setDevis] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [manualStatus, setManualStatus] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(null);
+  const [aiForm, setAiForm] = useState({ filename: '', text: '' });
+  const [aiResult, setAiResult] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
-  const [trainees, setTrainees] = useState([
-    { id: 't1', first: 'Laurence', last: 'Martin', email: 'l.martin@test.fr', phone: '06 12 34 56 78', disability: 'Déficience visuelle légère', score: '85%', satHot: 4, satCold: null },
-    { id: 't2', first: 'Julien', last: 'Dupont', email: 'j.dupont@test.fr', phone: '06 98 76 54 32', disability: '', score: 'Non fait', satHot: 5, satCold: 4 },
-    { id: 't3', first: 'Sarah', last: 'Alami', email: 's.alami@test.fr', phone: '07 11 22 33 44', disability: '', score: '90%', satHot: 5, satCold: 5 },
-  ]);
+  useEffect(() => {
+    fetch('/api/bootstrap')
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setDbError(d.error); return; }
+        setSessions(d.sessions || []);
+        setTrainees(d.trainees || []);
+        setVeilles(d.veilles || []);
+        setReclamations(d.reclamations || []);
+        setPac(d.pac || []);
+        setClients(d.clients || []);
+        setDevis(d.devis || []);
+        setDocuments(d.documents || []);
+        setManualStatus(d.manualStatus || {});
+      })
+      .catch(e => setDbError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const [veilles, setVeilles] = useState([
-    { id: 'v1', type: 'Réglementaire (Ind. 23)', source: 'Décret JO de la formation', summary: 'Obligations de transparence renforcées sur le CPF dès juillet 2026.', exploit: 'Mise à jour des CGV et mention sur le devis standard.', date: '2026-06-01' },
-  ]);
-
-  const [reclamations, setReclamations] = useState([
-    { id: 'r1', issuer: 'OPCO Atlas', role: 'Financeur', desc: "Délai trop long pour la réception du certificat de réalisation.", status: 'Résolue', reply: 'Certificat généré et renvoyé en 5 min. Action préventive intégrée dans le PAC.', date: '2026-05-10' },
-  ]);
-
-  const [pac, setPac] = useState([
-    { id: 'p1', action: "Automatiser l'envoi du certificat de réalisation", indicator: 'Indicateur 31', trigger: 'Réclamation OPCO', owner: 'Resp. Qualité', deadline: '2026-06-30', status: 'Terminé' },
-  ]);
-
-  const [clients, setClients] = useState([
-    { id: 'c1', name: 'OPCO Atlas', type: 'Financeur', contact: 'Marie Leblanc', email: 'm.leblanc@opco.fr', phone: '01 23 45 67 89', ca: 4200 },
-    { id: 'c2', name: 'BTP Formation', type: 'Prescripteur', contact: 'Jacques Morin', email: 'j.morin@btp.fr', phone: '01 98 76 54 32', ca: 2800 },
-  ]);
-
-  const [devis, setDevis] = useState([
-    { id: 'd1', client: 'BTP Formation', session: 'Développement Web Next.js', amount: 2800, status: 'Accepté', date: '2026-06-10' },
-    { id: 'd2', client: 'OPCO Atlas', session: "S'installer et pérenniser son OF", amount: 4200, status: 'En attente', date: '2026-06-15' },
-  ]);
+  /* helpers API */
+  const jsonHeaders = { 'Content-Type': 'application/json' };
+  const api = {
+    create: (c, body) => fetch(`/api/${c}`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify(body) }).then(r => r.json()),
+    remove: (c, id) => fetch(`/api/${c}/${id}`, { method: 'DELETE' }),
+    patch: (c, id, body) => fetch(`/api/${c}/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(body) }),
+    setInd: (id, status) => fetch('/api/indicator-status', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ id, status }) }),
+  };
+  const delItem = (c, id, setter) => { setter(p => p.filter(x => x.id !== id)); api.remove(c, id); };
 
   /* form state */
   const emptySession = { title: '', trainer: '', start: '', end: '', duration: '', status: 'Projet', trainees: 0, handicap: false, handicapNote: '', price: 0, modality: 'Présentiel' };
@@ -177,7 +268,9 @@ export default function App() {
   const activeSess  = sessions.filter(s => s.status === 'Actif').length;
   const openRec     = reclamations.filter(r => r.status !== 'Résolue').length;
   const totalCA     = sessions.filter(s => s.status !== 'Annulé').reduce((a, s) => a + (s.price || 0), 0);
-  const indOk       = INDICATEURS.filter(i => i.ok).length;
+  const liveInd     = useMemo(() => buildIndicators({ sessions, trainees, veilles, reclamations, pac }, manualStatus), [sessions, trainees, veilles, reclamations, pac, manualStatus]);
+  const indOk       = liveInd.filter(i => i.status === 'conforme').length;
+  const readiness   = Math.round(liveInd.reduce((a, i) => a + STATUS_WEIGHT[i.status], 0) / INDICATEURS.length * 100);
   const satScores   = trainees.filter(t => t.satHot).map(t => t.satHot);
   const avgSat      = satScores.length ? (satScores.reduce((a,b) => a+b, 0) / satScores.length).toFixed(1) : '–';
 
@@ -189,43 +282,123 @@ export default function App() {
   /* actions */
   const toggleDoc = (docKey) => {
     if (!selectedSessionId) return;
-    setSessions(p => p.map(s => s.id === selectedSessionId ? { ...s, docs: { ...s.docs, [docKey]: !s.docs[docKey] } } : s));
+    setSessions(p => p.map(s => {
+      if (s.id !== selectedSessionId) return s;
+      const docs = { ...s.docs, [docKey]: !s.docs[docKey] };
+      api.patch('sessions', s.id, { docs });
+      return { ...s, docs };
+    }));
   };
 
-  const saveSession = () => {
+  const saveSession = async () => {
     if (!form.title?.trim()) return;
-    setSessions(p => [...p, { ...emptySession, ...form, id: `s${Date.now()}`, docs: { convention: false, positioning: false, attendance: false, certificate: false } }]);
+    const saved = await api.create('sessions', { ...emptySession, ...form, docs: { convention: false, positioning: false, attendance: false, certificate: false } });
+    if (saved && !saved.error) setSessions(p => [...p, saved]);
     closeModal();
   };
-  const saveTrainee = () => {
+  const saveTrainee = async () => {
     if (!form.first?.trim()) return;
-    setTrainees(p => [...p, { ...emptyTrainee, ...form, id: `t${Date.now()}` }]);
+    const saved = await api.create('trainees', { ...emptyTrainee, ...form });
+    if (saved && !saved.error) setTrainees(p => [...p, saved]);
     closeModal();
   };
-  const saveVeille = () => {
+  const saveVeille = async () => {
     if (!form.type?.trim()) return;
-    setVeilles(p => [...p, { ...emptyVeille, ...form, id: `v${Date.now()}` }]);
+    const saved = await api.create('veilles', { ...emptyVeille, ...form });
+    if (saved && !saved.error) setVeilles(p => [...p, saved]);
     closeModal();
   };
-  const saveRec = () => {
+  const saveRec = async () => {
     if (!form.issuer?.trim()) return;
-    setReclamations(p => [...p, { ...emptyRec, ...form, id: `r${Date.now()}` }]);
+    const saved = await api.create('reclamations', { ...emptyRec, ...form });
+    if (saved && !saved.error) setReclamations(p => [...p, saved]);
     closeModal();
   };
-  const savePac = () => {
+  const savePac = async () => {
     if (!form.action?.trim()) return;
-    setPac(p => [...p, { ...emptyPac, ...form, id: `p${Date.now()}` }]);
+    const saved = await api.create('pac', { ...emptyPac, ...form });
+    if (saved && !saved.error) setPac(p => [...p, saved]);
     closeModal();
   };
-  const saveClient = () => {
+  const saveClient = async () => {
     if (!form.name?.trim()) return;
-    setClients(p => [...p, { ...emptyClient, ...form, id: `c${Date.now()}` }]);
+    const saved = await api.create('clients', { ...emptyClient, ...form });
+    if (saved && !saved.error) setClients(p => [...p, saved]);
     closeModal();
   };
-  const saveDevis = () => {
+  const saveDevis = async () => {
     if (!form.client?.trim()) return;
-    setDevis(p => [...p, { ...emptyDevis, ...form, id: `d${Date.now()}` }]);
+    const saved = await api.create('devis', { ...emptyDevis, ...form });
+    if (saved && !saved.error) setDevis(p => [...p, saved]);
     closeModal();
+  };
+
+  /* moteur de preuve : écarts + export dossier d'audit */
+  const gaps = liveInd.filter(i => i.status !== 'conforme');
+  const cycleStatus = (id) => {
+    const order = ['manquant', 'partiel', 'conforme'];
+    setManualStatus(p => {
+      const cur = p[id] || (INDICATEURS.find(i => i.id === id)?.ok ? 'conforme' : 'manquant');
+      const next = order[(order.indexOf(cur) + 1) % order.length];
+      api.setInd(id, next);
+      return { ...p, [id]: next };
+    });
+  };
+  const exportDossier = () => {
+    const L = [];
+    L.push("DOSSIER D'AUDIT QUALIOPI — Sokai Formation");
+    L.push(`Audit-readiness : ${readiness}%  (${indOk}/32 indicateurs conformes)`);
+    L.push('Généré le ' + new Date().toLocaleDateString('fr-FR'));
+    L.push('');
+    Object.entries(CRITERES_LABELS).forEach(([k, l]) => {
+      L.push(`== Critère ${k} — ${l} ==`);
+      liveInd.filter(i => i.crit === +k).forEach(i => {
+        L.push(`  [${IND_STATUS[i.status].label}] Ind. ${i.id} — ${i.label}`);
+        i.evidence.forEach(e => L.push('     Preuve : ' + e));
+        i.gaps.forEach(g => L.push('     Écart : ' + g));
+      });
+      L.push('');
+    });
+    const blob = new Blob([L.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dossier-audit-qualiopi.txt'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /* moteur de preuve IA : analyse d'un document -> indicateur */
+  const indLabel = (id) => INDICATEURS.find(i => i.id === id)?.label || '';
+  const analyzeDoc = async () => {
+    if (!aiForm.text.trim()) return;
+    setAiLoading(true); setAiResult(null);
+    try {
+      const r = await fetch('/api/classify', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(aiForm) }).then(x => x.json());
+      if (r.error) setAiResult({ error: r.error });
+      else { setAiResult(r.result); setDocuments(p => [...p, r.doc]); }
+    } catch (e) { setAiResult({ error: e.message }); }
+    setAiLoading(false);
+  };
+  const validateDoc = (doc, indicatorId) => {
+    if (indicatorId) {
+      api.setInd(indicatorId, 'conforme');
+      setManualStatus(p => ({ ...p, [indicatorId]: 'conforme' }));
+    }
+    api.patch('documents', doc.id, { status: 'validé' });
+    setDocuments(p => p.map(x => x.id === doc.id ? { ...x, status: 'validé' } : x));
+  };
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtracting(true); setAiResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/extract', { method: 'POST', body: fd }).then(x => x.json());
+      if (r.error) setAiResult({ error: r.error });
+      else setAiForm({ filename: r.filename, text: r.text });
+    } catch (err) { setAiResult({ error: err.message }); }
+    setExtracting(false);
+    e.target.value = '';
   };
 
   /* ── nav ── */
@@ -238,6 +411,8 @@ export default function App() {
     { key: 'reclamations', icon: MessageSquareWarning, label: 'Réclamations', badge: openRec },
     { key: 'pac',          icon: CheckSquare,     label: 'Plan qualité' },
     { key: 'indicateurs',  icon: Shield,          label: '32 Indicateurs' },
+    { key: 'copilote',     icon: ClipboardList,   label: 'Copilote IA', badge: gaps.length },
+    { key: 'preuves',      icon: Award,           label: 'Preuves IA' },
     { key: 'crm',          icon: Building2,       label: 'CRM' },
     { key: 'facturation',  icon: Euro,            label: 'Devis & Facturation' },
   ];
@@ -289,11 +464,11 @@ export default function App() {
           {/* Conformité pill */}
           <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100">
             <div className="flex justify-between items-center mb-1.5">
-              <span className="text-[10px] font-bold text-slate-500">Conformité dossier</span>
-              <span className="text-xs font-black text-indigo-600">{conformRate}%</span>
+              <span className="text-[10px] font-bold text-slate-500">Audit-readiness</span>
+              <span className="text-xs font-black text-indigo-600">{readiness}%</span>
             </div>
             <div className="w-full bg-slate-200 rounded-full h-1.5">
-              <div className="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${conformRate}%` }} />
+              <div className={cls('h-1.5 rounded-full transition-all duration-500', readiness >= 90 ? 'bg-emerald-500' : readiness >= 70 ? 'bg-indigo-500' : 'bg-amber-400')} style={{ width: `${readiness}%` }} />
             </div>
           </div>
 
@@ -334,22 +509,35 @@ export default function App() {
                 <Bell className="w-3 h-3" /> {openRec} réclamation{openRec > 1 ? 's' : ''} ouverte{openRec > 1 ? 's' : ''}
               </button>
             )}
+            <button onClick={exportDossier}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-full text-[10px] font-bold hover:bg-indigo-700 transition">
+              <Download className="w-3 h-3" /> Dossier d&apos;audit
+            </button>
             <div className={cls('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border',
-              conformRate === 100 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : conformRate >= 70 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-red-50 text-red-700 border-red-200')}>
-              <span className={cls('w-2 h-2 rounded-full', conformRate === 100 ? 'bg-emerald-500 animate-pulse' : conformRate >= 70 ? 'bg-amber-500' : 'bg-red-500')} />
-              {conformRate}% conforme
+              readiness >= 90 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : readiness >= 70 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-red-50 text-red-700 border-red-200')}>
+              <span className={cls('w-2 h-2 rounded-full', readiness >= 90 ? 'bg-emerald-500 animate-pulse' : readiness >= 70 ? 'bg-amber-500' : 'bg-red-500')} />
+              {readiness}% audit-ready
             </div>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
+          {dbError && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">
+              Base de données non connectée ({dbError}). Lancez PostgreSQL (docker compose up -d) puis rechargez la page.
+            </div>
+          )}
+          {loading && !dbError && (
+            <div className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">Chargement des données…</div>
+          )}
+
           {/* ══════════════ DASHBOARD ══════════════ */}
           {tab === 'dashboard' && (
             <>
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <KpiCard label="Conformité" value={`${conformRate}%`} icon={Shield} color="indigo" sub={`${totalDocs}/${maxDocs} docs`} trend={5} />
+                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="indigo" sub={`${indOk}/32 indicateurs`} trend={5} />
                 <KpiCard label="Sessions actives" value={activeSess} icon={Calendar} color="blue" sub={`${sessions.length} au total`} />
                 <KpiCard label="Stagiaires" value={trainees.length} icon={Users} color="violet" sub="inscrits" trend={12} />
                 <KpiCard label="Satisfaction" value={`${avgSat}/5`} icon={Star} color="amber" sub="éval. à chaud moy." />
@@ -396,9 +584,9 @@ export default function App() {
                   <p className="text-xs font-extrabold text-slate-900 mb-4">Critères Qualiopi</p>
                   <div className="space-y-2.5">
                     {Object.entries(CRITERES_LABELS).map(([k, label]) => {
-                      const inds = INDICATEURS.filter(i => i.crit === +k);
-                      const okCount = inds.filter(i => i.ok).length;
-                      const pct = Math.round((okCount / inds.length) * 100);
+                      const inds = liveInd.filter(i => i.crit === +k);
+                      const okCount = inds.filter(i => i.status === 'conforme').length;
+                      const pct = Math.round((inds.reduce((a, i) => a + STATUS_WEIGHT[i.status], 0) / inds.length) * 100);
                       return (
                         <div key={k}>
                           <div className="flex justify-between mb-1">
@@ -491,7 +679,7 @@ export default function App() {
                             ))}
                           </div>
                         </div>
-                        <button onClick={e => { e.stopPropagation(); setSessions(p => p.filter(x => x.id !== s.id)); if (selectedSessionId === s.id) setSelectedSessionId(null); }}
+                        <button onClick={e => { e.stopPropagation(); delItem('sessions', s.id, setSessions); if (selectedSessionId === s.id) setSelectedSessionId(null); }}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -536,7 +724,7 @@ export default function App() {
                         </button>
                       ))}
                     </div>
-                    <button className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>
+                    <button onClick={exportDossier} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>
                       <Download className="w-3.5 h-3.5" /> Exporter le dossier
                     </button>
                   </div>
@@ -574,7 +762,7 @@ export default function App() {
                       <div className="flex gap-0.5">
                         {[1,2,3,4,5].map(n => <Star key={n} className={cls('w-3 h-3', (t.satHot||0) >= n ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200')} />)}
                       </div>
-                      <button onClick={() => setTrainees(p => p.filter(x => x.id !== t.id))}
+                      <button onClick={() => delItem('trainees', t.id, setTrainees)}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -656,7 +844,7 @@ export default function App() {
                           <p className="text-[11px] text-emerald-700 font-semibold">{v.exploit}</p>
                         </div>
                       </div>
-                      <button onClick={() => setVeilles(p => p.filter(x => x.id !== v.id))}
+                      <button onClick={() => delItem('veilles', v.id, setVeilles)}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 ml-4 transition">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -699,7 +887,7 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                      <button onClick={() => setReclamations(p => p.filter(x => x.id !== r.id))}
+                      <button onClick={() => delItem('reclamations', r.id, setReclamations)}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition shrink-0">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -737,7 +925,7 @@ export default function App() {
                       </div>
                       {p.trigger && <p className="text-[10px] text-slate-400 mt-1">Déclenché par : {p.trigger}</p>}
                     </div>
-                    <button onClick={() => setPac(prev => prev.filter(x => x.id !== p.id))}
+                    <button onClick={() => delItem('pac', p.id, setPac)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -757,23 +945,29 @@ export default function App() {
                 <KpiCard label="Taux global" value={`${Math.round(indOk / 32 * 100)}%`} icon={Shield} color="indigo" />
               </div>
               {Object.entries(CRITERES_LABELS).map(([k, clabel]) => {
-                const inds = INDICATEURS.filter(i => i.crit === +k);
+                const inds = liveInd.filter(i => i.crit === +k);
+                const okc = inds.filter(i => i.status === 'conforme').length;
                 return (
                   <div key={k} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                     <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                       <p className="text-xs font-extrabold text-slate-900">Critère {k} — {clabel}</p>
-                      <span className="text-[10px] font-bold text-slate-500">{inds.filter(i => i.ok).length}/{inds.length} OK</span>
+                      <span className="text-[10px] font-bold text-slate-500">{okc}/{inds.length} conformes</span>
                     </div>
                     <div className="divide-y divide-slate-50">
                       {inds.map(ind => (
-                        <div key={ind.id} className="px-6 py-3 flex items-center gap-3">
-                          {ind.ok
-                            ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                            : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
-                          <span className="text-[10px] font-bold text-slate-500 w-8">Ind. {ind.id}</span>
-                          <p className="text-xs text-slate-700 flex-1">{ind.label}</p>
-                          <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border', ind.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-100')}>
-                            {ind.ok ? 'Conforme' : 'À compléter'}
+                        <div key={ind.id} className="px-6 py-3 flex items-start gap-3">
+                          <span className={cls('w-2.5 h-2.5 rounded-full mt-1 shrink-0', IND_STATUS[ind.status].dot)} />
+                          <span className="text-[10px] font-bold text-slate-500 w-10 shrink-0">Ind. {ind.id}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-700">{ind.label}</p>
+                            {ind.evidence.map((e, idx) => <p key={idx} className="text-[10px] text-emerald-600 mt-0.5">✓ {e}</p>)}
+                            {ind.gaps.map((g, idx) => <p key={idx} className="text-[10px] text-amber-600 mt-0.5">! {g}</p>)}
+                          </div>
+                          {ind.auto
+                            ? <span className="text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 shrink-0" title="Statut calculé automatiquement depuis vos données">auto</span>
+                            : <button onClick={() => cycleStatus(ind.id)} className="text-[9px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 shrink-0" title="Cliquer pour changer le statut">manuel</button>}
+                          <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border shrink-0 w-16 text-center', IND_STATUS[ind.status].badge)}>
+                            {IND_STATUS[ind.status].label}
                           </span>
                         </div>
                       ))}
@@ -809,7 +1003,7 @@ export default function App() {
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{c.type}</span>
                       <span className="text-xs font-black text-emerald-700">{c.ca?.toLocaleString('fr-FR')} €</span>
-                      <button onClick={() => setClients(p => p.filter(x => x.id !== c.id))}
+                      <button onClick={() => delItem('clients', c.id, setClients)}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -854,10 +1048,163 @@ export default function App() {
                         <button className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200 py-1 px-2')}>
                           <Download className="w-3 h-3" />
                         </button>
-                        <button onClick={() => setDevis(p => p.filter(x => x.id !== d.id))}
+                        <button onClick={() => delItem('devis', d.id, setDevis)}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ COPILOTE IA ══════════════ */}
+          {tab === 'copilote' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-4">
+                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="indigo" sub={`${indOk}/32 conformes`} />
+                <KpiCard label="Écarts à combler" value={gaps.length} icon={AlertTriangle} color={gaps.length ? 'amber' : 'emerald'} />
+                <KpiCard label="Prêt pour l'audit" value={readiness >= 90 ? 'Oui' : 'Bientôt'} icon={CheckCircle2} color={readiness >= 90 ? 'emerald' : 'amber'} />
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-900">Copilote IA — écarts prioritaires</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Preuves manquantes détectées automatiquement dans vos données</p>
+                  </div>
+                  <button onClick={exportDossier} className={cls(btn, 'bg-indigo-600 text-white hover:bg-indigo-700')}>
+                    <Download className="w-3.5 h-3.5" /> Exporter le dossier
+                  </button>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {gaps.length === 0 && (
+                    <p className="text-xs text-center text-emerald-600 py-12 font-semibold">Tous les indicateurs sont conformes. Vous êtes prêt pour l&apos;audit.</p>
+                  )}
+                  {gaps.map(i => (
+                    <div key={i.id} className="px-6 py-4 flex items-start gap-4">
+                      <span className={cls('w-2 h-2 rounded-full mt-1.5 shrink-0', IND_STATUS[i.status].dot)} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold text-slate-500">Ind. {i.id}</span>
+                          <p className="text-xs font-bold text-slate-900">{i.label}</p>
+                          <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border', IND_STATUS[i.status].badge)}>{IND_STATUS[i.status].label}</span>
+                          {i.auto && <span className="text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100">auto</span>}
+                        </div>
+                        {i.gaps.map((g, idx) => (
+                          <p key={idx} className="text-[11px] text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> {g}</p>
+                        ))}
+                        {i.evidence.map((e, idx) => (
+                          <p key={idx} className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3 shrink-0" /> {e}</p>
+                        ))}
+                      </div>
+                      <button onClick={() => setTab(IND_TAB[i.id] || 'indicateurs')}
+                        className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200 shrink-0')}>
+                        Corriger <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ PREUVES IA ══════════════ */}
+          {tab === 'preuves' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Analyse */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900">Analyser une preuve avec l'IA</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Importez un fichier (ou collez le texte) — l'IA le rattache à l'indicateur Qualiopi concerné.</p>
+                </div>
+                <label className={cls(btn, 'w-full justify-center border border-dashed border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer')}>
+                  <Upload className="w-3.5 h-3.5" /> {extracting ? 'Extraction en cours…' : 'Importer un fichier (PDF, DOCX, TXT)'}
+                  <input type="file" accept=".pdf,.docx,.txt,.md,.csv" className="hidden" onChange={onFile} disabled={extracting} />
+                </label>
+                <Field label="Nom du document"><input className={inp} placeholder="ex : Feuille d'émargement session Next.js" value={aiForm.filename} onChange={e => setAiForm(p => ({ ...p, filename: e.target.value }))} /></Field>
+                <div>
+                  <label className={lbl}>Contenu du document</label>
+                  <textarea className={cls(inp, 'resize-none font-mono')} rows={8} placeholder="Collez ici le texte du document (règlement intérieur, émargement, questionnaire de satisfaction, CV formateur, réclamation…)" value={aiForm.text} onChange={e => setAiForm(p => ({ ...p, text: e.target.value }))} />
+                </div>
+                <button onClick={analyzeDoc} disabled={aiLoading || !aiForm.text.trim()}
+                  className={cls(btn, 'w-full justify-center bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40')}>
+                  <Award className="w-3.5 h-3.5" /> {aiLoading ? 'Analyse en cours…' : 'Analyser avec l\'IA'}
+                </button>
+
+                {aiResult && aiResult.error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-[11px] text-red-700">{aiResult.error}</div>
+                )}
+                {aiResult && !aiResult.error && (
+                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Résultat</span>
+                      <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border', aiResult.engine === 'ia' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-slate-100 text-slate-600 border-slate-200')}>
+                        {aiResult.engine === 'ia' ? 'Moteur IA' : 'Moteur mots-clés'}
+                      </span>
+                    </div>
+                    {aiResult.indicatorId ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-500">Ind. {aiResult.indicatorId}</span>
+                          <p className="text-xs font-bold text-slate-900">{indLabel(aiResult.indicatorId)}</p>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-slate-500 font-semibold">Confiance</span>
+                            <span className="font-bold text-indigo-600">{Math.round((aiResult.confidence || 0) * 100)}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${Math.round((aiResult.confidence || 0) * 100)}%` }} />
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-600 italic">{aiResult.justification}</p>
+                        {aiResult.attendu && (
+                          <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-400">Attendu Qualiopi</p>
+                            <p className="text-[10px] text-indigo-700 mt-0.5">{aiResult.attendu}</p>
+                          </div>
+                        )}
+                        {aiResult.candidates?.length > 1 && (
+                          <p className="text-[10px] text-slate-400">Autres pistes : {aiResult.candidates.slice(1).map(c => `Ind. ${c.id}`).join(', ')}</p>
+                        )}
+                        <button onClick={() => { validateDoc(documents[documents.length - 1], aiResult.indicatorId); setAiResult(null); setAiForm({ filename: '', text: '' }); }}
+                          className={cls(btn, 'w-full justify-center bg-emerald-600 text-white hover:bg-emerald-700')}>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Valider &amp; marquer l'indicateur conforme
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {aiResult.justification}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Coffre-fort de preuves */}
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100">
+                  <h3 className="text-xs font-extrabold text-slate-900">Coffre-fort de preuves</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{documents.length} document(s) analysé(s)</p>
+                </div>
+                <div className="divide-y divide-slate-50 max-h-[520px] overflow-y-auto">
+                  {documents.length === 0 && <p className="text-xs text-center text-slate-400 py-12">Aucune preuve analysée pour l'instant.</p>}
+                  {[...documents].reverse().map(doc => (
+                    <div key={doc.id} className="px-6 py-3.5 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate">{doc.filename}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {doc.indicator ? `Ind. ${doc.indicator} — ${indLabel(doc.indicator)}` : 'Non rattaché'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {doc.confidence != null && <span className="text-[10px] text-slate-400">{Math.round(doc.confidence * 100)}%</span>}
+                        {doc.status === 'validé'
+                          ? <span className="text-[9px] font-bold px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">validé</span>
+                          : <button onClick={() => validateDoc(doc, doc.indicator)} className="text-[9px] font-bold px-2 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700">valider</button>}
                       </div>
                     </div>
                   ))}

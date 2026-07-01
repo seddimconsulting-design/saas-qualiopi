@@ -1,0 +1,135 @@
+-- Schéma applicatif pragmatique : colle 1:1 aux objets du prototype (mono-tenant).
+-- Le schéma normalisé "cible" reste dans schema.sql.
+
+CREATE TABLE IF NOT EXISTS app_sessions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    trainer TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    duration TEXT,
+    status TEXT DEFAULT 'Projet',
+    trainees_count INT DEFAULT 0,
+    handicap BOOLEAN DEFAULT FALSE,
+    handicap_note TEXT,
+    price NUMERIC(10,2) DEFAULT 0,
+    modality TEXT DEFAULT 'Présentiel',
+    docs JSONB DEFAULT '{"convention":false,"positioning":false,"attendance":false,"certificate":false}',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS app_trainees (
+    id TEXT PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT,
+    email TEXT,
+    phone TEXT,
+    disability TEXT,
+    positioning_score TEXT DEFAULT 'Non fait',
+    sat_hot INT,
+    sat_cold INT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS veilles (
+    id TEXT PRIMARY KEY,
+    type TEXT,
+    source TEXT,
+    summary TEXT,
+    exploit TEXT,
+    veille_date TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS reclamations (
+    id TEXT PRIMARY KEY,
+    issuer TEXT,
+    role TEXT,
+    description TEXT,
+    status TEXT DEFAULT 'En cours',
+    reply TEXT,
+    rec_date TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS pac (
+    id TEXT PRIMARY KEY,
+    action TEXT,
+    indicator TEXT,
+    trigger_event TEXT,
+    owner TEXT,
+    deadline TEXT,
+    status TEXT DEFAULT 'En cours',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS clients (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT,
+    contact TEXT,
+    email TEXT,
+    phone TEXT,
+    ca NUMERIC(10,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS devis (
+    id TEXT PRIMARY KEY,
+    client TEXT,
+    session TEXT,
+    amount NUMERIC(10,2) DEFAULT 0,
+    status TEXT DEFAULT 'En attente',
+    devis_date TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS indicator_status (
+    indicator_id INT PRIMARY KEY,
+    status TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    filename TEXT,
+    indicator_id INT,
+    confidence NUMERIC(4,3),
+    justification TEXT,
+    status TEXT DEFAULT 'proposé',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ─── Données de démonstration (idempotent) ───
+INSERT INTO app_sessions (id, title, trainer, start_date, end_date, duration, status, trainees_count, handicap, handicap_note, price, modality, docs) VALUES
+ ('s1', 'Développement Web Next.js', 'Guillaume S.', '2026-07-10', '2026-07-12', '14h', 'Projet', 5, TRUE, 'Supports en gros caractères pour Laurence Martin.', 2800, 'Présentiel', '{"convention":false,"positioning":false,"attendance":false,"certificate":false}'),
+ ('s2', 'S''installer et pérenniser son OF', 'Thomas M.', '2026-06-15', '2026-06-18', '21h', 'Actif', 8, FALSE, '', 4200, 'Présentiel', '{"convention":true,"positioning":true,"attendance":false,"certificate":false}'),
+ ('s3', 'RGPD & Gestion des données', 'Marie D.', '2026-05-01', '2026-05-02', '7h', 'Terminé', 4, FALSE, '', 1400, 'Distanciel', '{"convention":true,"positioning":true,"attendance":true,"certificate":true}')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO app_trainees (id, first_name, last_name, email, phone, disability, positioning_score, sat_hot, sat_cold) VALUES
+ ('t1', 'Laurence', 'Martin', 'l.martin@test.fr', '06 12 34 56 78', 'Déficience visuelle légère', '85%', 4, NULL),
+ ('t2', 'Julien', 'Dupont', 'j.dupont@test.fr', '06 98 76 54 32', '', 'Non fait', 5, 4),
+ ('t3', 'Sarah', 'Alami', 's.alami@test.fr', '07 11 22 33 44', '', '90%', 5, 5)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO veilles (id, type, source, summary, exploit, veille_date) VALUES
+ ('v1', 'Réglementaire (Ind. 23)', 'Décret JO de la formation', 'Obligations de transparence renforcées sur le CPF dès juillet 2026.', 'Mise à jour des CGV et mention sur le devis standard.', '2026-06-01')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO reclamations (id, issuer, role, description, status, reply, rec_date) VALUES
+ ('r1', 'OPCO Atlas', 'Financeur', 'Délai trop long pour la réception du certificat de réalisation.', 'Résolue', 'Certificat généré et renvoyé en 5 min. Action préventive intégrée dans le PAC.', '2026-05-10')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO pac (id, action, indicator, trigger_event, owner, deadline, status) VALUES
+ ('p1', 'Automatiser l''envoi du certificat de réalisation', 'Indicateur 31', 'Réclamation OPCO', 'Resp. Qualité', '2026-06-30', 'Terminé')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO clients (id, name, type, contact, email, phone, ca) VALUES
+ ('c1', 'OPCO Atlas', 'Financeur', 'Marie Leblanc', 'm.leblanc@opco.fr', '01 23 45 67 89', 4200),
+ ('c2', 'BTP Formation', 'Prescripteur', 'Jacques Morin', 'j.morin@btp.fr', '01 98 76 54 32', 2800)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO devis (id, client, session, amount, status, devis_date) VALUES
+ ('d1', 'BTP Formation', 'Développement Web Next.js', 2800, 'Accepté', '2026-06-10'),
+ ('d2', 'OPCO Atlas', 'S''installer et pérenniser son OF', 4200, 'En attente', '2026-06-15')
+ON CONFLICT (id) DO NOTHING;
