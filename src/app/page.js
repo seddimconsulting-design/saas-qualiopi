@@ -7,7 +7,7 @@ import {
   Save, ChevronRight, TrendingUp, BarChart3, Euro, Calendar,
   Clock, Star, Building2, CreditCard, ClipboardList, Bell,
   BookOpen, Shield, Award, X, Filter, Search, Download,
-  ArrowUpRight, ArrowDownRight, Minus, Upload
+  ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut
 } from 'lucide-react';
 import { TEMPLATES } from '@/lib/doc-templates';
 
@@ -213,6 +213,7 @@ export default function App() {
   const [manualStatus, setManualStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
+  const [me, setMe] = useState(null);
   const [aiForm, setAiForm] = useState({ filename: '', text: '' });
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -237,7 +238,13 @@ export default function App() {
       })
       .catch(e => setDbError(e.message))
       .finally(() => setLoading(false));
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(setMe).catch(() => {});
   }, []);
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  };
 
   /* helpers API */
   const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -495,9 +502,11 @@ export default function App() {
         </div>
 
         <div className="p-4 border-t border-slate-100">
-          <p className="text-xs font-bold text-slate-800">Sokai Formation</p>
-          <p className="text-[10px] text-slate-400">NDA : 93123456789</p>
-          <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">● Certifié Qualiopi</p>
+          <p className="text-xs font-bold text-slate-800 truncate">{me?.ofName || '—'}</p>
+          <p className="text-[10px] text-slate-400 truncate">{me?.email || ''}</p>
+          <button onClick={logout} className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-100 transition">
+            <LogOut className="w-3 h-3" /> Se déconnecter
+          </button>
         </div>
       </aside>
 
@@ -508,7 +517,7 @@ export default function App() {
         <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-sm font-extrabold text-slate-900">{navItems.find(n => n.key === tab)?.label}</h2>
-            <p className="text-[11px] text-slate-400">Sokai Formation · 32 indicateurs Qualiopi</p>
+            <p className="text-[11px] text-slate-400">{me?.ofName || '…'} · 32 indicateurs Qualiopi</p>
           </div>
           <div className="flex items-center gap-2">
             {openRec > 0 && (

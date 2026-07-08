@@ -16,6 +16,21 @@ const { Client } = require('pg');
     await client.query(sql);
     const { rows } = await client.query('SELECT count(*)::int AS n FROM app_sessions');
     console.log(`OK - Migration appliquee. app_sessions : ${rows[0].n} lignes.`);
+
+    // Compte de démonstration (rattaché au tenant demo qui porte les données d'exemple)
+    const bcrypt = require('bcryptjs');
+    const demoEmail = 'demo@qualisaas.fr';
+    const exists = await client.query('SELECT 1 FROM app_users WHERE email = $1', [demoEmail]);
+    if (!exists.rows.length) {
+      const hash = await bcrypt.hash('DemoQualiopi2026', 10);
+      await client.query(
+        "INSERT INTO app_users (id, tenant_id, email, password_hash, name) VALUES ('u-demo', 'demo-tenant', $1, $2, 'Sokai Formation (démo)')",
+        [demoEmail, hash]
+      );
+      console.log(`OK - Compte démo créé : ${demoEmail} / DemoQualiopi2026`);
+    } else {
+      console.log('OK - Compte démo déjà présent.');
+    }
   } catch (e) {
     console.error('Echec migration :', e.message);
     process.exit(1);

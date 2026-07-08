@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { TEMPLATES, OF } from '@/lib/doc-templates';
 import { renderDocx, renderPdf } from '@/lib/doc-render';
 import { q } from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,11 +11,11 @@ export const runtime = 'nodejs';
 const frDate = (d) => (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)
   ? d.split('-').reverse().join('/') : (d || ''));
 
-/* Construit le contexte de pré-remplissage depuis la base. */
-async function buildContext(sessionId, traineeId) {
-  const ctx = { ofName: OF.name, ofNda: OF.nda };
+/* Construit le contexte de pré-remplissage depuis la base (scopé au tenant). */
+async function buildContext(sessionId, traineeId, tenantId) {
+  const ctx = {};
   if (sessionId) {
-    const rows = await q('SELECT * FROM app_sessions WHERE id = $1', [sessionId]);
+    const rows = await q('SELECT * FROM app_sessions WHERE id = $1 AND tenant_id = $2', [sessionId, tenantId]);
     const s = rows[0];
     if (s) Object.assign(ctx, {
       sessionTitle: s.title, startDate: frDate(s.start_date), endDate: frDate(s.end_date),
@@ -23,7 +24,7 @@ async function buildContext(sessionId, traineeId) {
     });
   }
   if (traineeId) {
-    const rows = await q('SELECT * FROM app_trainees WHERE id = $1', [traineeId]);
+    const rows = await q('SELECT * FROM app_trainees WHERE id = $1 AND tenant_id = $2', [traineeId, tenantId]);
     const tr = rows[0];
     if (tr) Object.assign(ctx, { traineeName: `${tr.first_name} ${tr.last_name}`.trim(), traineeEmail: tr.email });
   }
@@ -31,14 +32,17 @@ async function buildContext(sessionId, traineeId) {
 }
 
 export async function GET(req, { params }) {
+  const session = await getSession(req);
+  if (!session) return NextResponse.json({ error: 'non authentifié' }, { status: 401 });
   const t = TEMPLATES.find(x => x.id === params.id);
   if (!t) return NextResponse.json({ error: 'Modèle inconnu' }, { status: 404 });
   const sp = new URL(req.url).searchParams;
   const format = sp.get('format') || 'pdf';
+  const of = { name: session.ofName || OF.name, nda: OF.nda };
   try {
-    const ctx = await buildContext(sp.get('sessionId'), sp.get('traineeId'));
+    const ctx = await buildContext(sp.get('sessionId'), sp.get('traineeId'), session.tenantId);
     if (format === 'docx') {
-      const buf = await renderDocx(t, OF, ctx);
+      const buf = await renderDocx(t, of, ctx);
       return new NextResponse(buf, {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -46,7 +50,7 @@ export async function GET(req, { params }) {
         },
       });
     }
-    const buf = await renderPdf(t, OF, ctx);
+    const buf = await renderPdf(t, of, ctx);
     return new NextResponse(buf, {
       headers: {
         'Content-Type': 'application/pdf',

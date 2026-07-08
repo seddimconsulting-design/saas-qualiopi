@@ -1,0 +1,37 @@
+import { NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
+
+const secret = new TextEncoder().encode(
+  process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || 'dev-secret-change-me-in-prod'
+);
+
+async function isAuthed(token) {
+  if (!token) return false;
+  try { await jwtVerify(token, secret); return true; } catch { return false; }
+}
+
+export async function middleware(req) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get('session')?.value;
+  const authed = await isAuthed(token);
+
+  // Routes d'auth : toujours ouvertes
+  if (pathname.startsWith('/api/auth')) return NextResponse.next();
+
+  // Autres API : authentification requise
+  if (pathname.startsWith('/api')) {
+    return authed ? NextResponse.next() : NextResponse.json({ error: 'non authentifié' }, { status: 401 });
+  }
+
+  // Page de connexion : rediriger vers l'app si déjà connecté
+  if (pathname === '/login') {
+    return authed ? NextResponse.redirect(new URL('/', req.url)) : NextResponse.next();
+  }
+
+  // App : authentification requise
+  return authed ? NextResponse.next() : NextResponse.redirect(new URL('/login', req.url));
+}
+
+export const config = {
+  matcher: ['/', '/login', '/api/:path*'],
+};

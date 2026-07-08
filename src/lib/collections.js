@@ -89,17 +89,17 @@ function toValue(cfg, js, raw) {
   return raw;
 }
 
-export async function listAll(name) {
+export async function listAll(name, tenantId) {
   const cfg = COLLECTIONS[name];
-  const rows = await q(`SELECT * FROM ${cfg.table} ORDER BY ${cfg.order} ASC`);
+  const rows = await q(`SELECT * FROM ${cfg.table} WHERE tenant_id = $1 ORDER BY ${cfg.order} ASC`, [tenantId]);
   return rows.map(r => fromRow(cfg, r));
 }
 
-export async function createOne(name, body) {
+export async function createOne(name, body, tenantId) {
   const cfg = COLLECTIONS[name];
   const id = body.id || genId(name[0]);
-  const cols = ['id'];
-  const vals = [id];
+  const cols = ['id', 'tenant_id'];
+  const vals = [id, tenantId];
   for (const [js, col] of Object.entries(cfg.fields)) {
     cols.push(col);
     vals.push(toValue(cfg, js, body[js]));
@@ -109,7 +109,7 @@ export async function createOne(name, body) {
   return fromRow(cfg, rows[0]);
 }
 
-export async function updateOne(name, id, patch) {
+export async function updateOne(name, id, patch, tenantId) {
   const cfg = COLLECTIONS[name];
   const sets = [];
   const vals = [];
@@ -120,31 +120,34 @@ export async function updateOne(name, id, patch) {
       vals.push(toValue(cfg, js, patch[js]));
     }
   }
-  if (!sets.length) { const rows = await q(`SELECT * FROM ${cfg.table} WHERE id = $1`, [id]); return fromRow(cfg, rows[0]); }
-  vals.push(id);
-  const rows = await q(`UPDATE ${cfg.table} SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`, vals);
-  return fromRow(cfg, rows[0]);
+  if (!sets.length) {
+    const rows = await q(`SELECT * FROM ${cfg.table} WHERE id = $1 AND tenant_id = $2`, [id, tenantId]);
+    return rows[0] ? fromRow(cfg, rows[0]) : null;
+  }
+  vals.push(id, tenantId);
+  const rows = await q(`UPDATE ${cfg.table} SET ${sets.join(', ')} WHERE id = $${i} AND tenant_id = $${i + 1} RETURNING *`, vals);
+  return rows[0] ? fromRow(cfg, rows[0]) : null;
 }
 
-export async function deleteOne(name, id) {
+export async function deleteOne(name, id, tenantId) {
   const cfg = COLLECTIONS[name];
-  await q(`DELETE FROM ${cfg.table} WHERE id = $1`, [id]);
+  await q(`DELETE FROM ${cfg.table} WHERE id = $1 AND tenant_id = $2`, [id, tenantId]);
   return { ok: true };
 }
 
-/* Statuts manuels d'indicateurs (overrides). */
-export async function listIndicatorStatus() {
-  const rows = await q('SELECT indicator_id, status FROM indicator_status');
+/* Statuts manuels d'indicateurs (overrides), par tenant. */
+export async function listIndicatorStatus(tenantId) {
+  const rows = await q('SELECT indicator_id, status FROM indicator_status WHERE tenant_id = $1', [tenantId]);
   const map = {};
   for (const r of rows) map[r.indicator_id] = r.status;
   return map;
 }
 
-export async function setIndicatorStatus(indicatorId, status) {
+export async function setIndicatorStatus(tenantId, indicatorId, status) {
   await q(
-    `INSERT INTO indicator_status (indicator_id, status) VALUES ($1, $2)
-     ON CONFLICT (indicator_id) DO UPDATE SET status = EXCLUDED.status`,
-    [indicatorId, status]
+    `INSERT INTO indicator_status (tenant_id, indicator_id, status) VALUES ($1, $2, $3)
+     ON CONFLICT (tenant_id, indicator_id) DO UPDATE SET status = EXCLUDED.status`,
+    [tenantId, indicatorId, status]
   );
   return { ok: true };
 }

@@ -133,3 +133,49 @@ INSERT INTO devis (id, client, session, amount, status, devis_date) VALUES
  ('d1', 'BTP Formation', 'Développement Web Next.js', 2800, 'Accepté', '2026-06-10'),
  ('d2', 'OPCO Atlas', 'S''installer et pérenniser son OF', 4200, 'En attente', '2026-06-15')
 ON CONFLICT (id) DO NOTHING;
+
+-- ─── Multi-tenant : comptes & isolation des données ───
+CREATE TABLE IF NOT EXISTS app_tenants (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    nda TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS app_users (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES app_tenants(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Colonne tenant_id sur toutes les tables de données
+ALTER TABLE app_sessions ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE app_trainees ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE veilles      ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE reclamations ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE pac          ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE clients      ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE devis        ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE documents    ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+
+-- Tenant de démonstration (récupère les données d'exemple)
+INSERT INTO app_tenants (id, name, nda) VALUES ('demo-tenant', 'Sokai Formation (démo)', '93123456789')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE app_sessions SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE app_trainees SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE veilles      SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE reclamations SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE pac          SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE clients      SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE devis        SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+UPDATE documents    SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+
+-- indicator_status devient multi-tenant (clé composite tenant_id + indicator_id)
+ALTER TABLE indicator_status ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+UPDATE indicator_status SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
+ALTER TABLE indicator_status DROP CONSTRAINT IF EXISTS indicator_status_pkey;
+ALTER TABLE indicator_status ADD CONSTRAINT indicator_status_pkey PRIMARY KEY (tenant_id, indicator_id);
