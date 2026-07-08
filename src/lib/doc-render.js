@@ -1,5 +1,12 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun } from 'docx';
 import PDFDocument from 'pdfkit';
+
+/* Parse un logo dataURL base64 (png/jpg) -> { buffer, type }. */
+function parseLogo(dataUrl) {
+  const m = /^data:image\/(png|jpe?g);base64,(.+)$/i.exec(dataUrl || '');
+  if (!m) return null;
+  return { buffer: Buffer.from(m[2], 'base64'), type: m[1].toLowerCase().startsWith('jp') ? 'jpg' : 'png' };
+}
 
 /* Remplace les jetons {{token}} par les données réelles (ou une ligne à compléter). */
 const applyCtx = (text, ctx) =>
@@ -10,7 +17,14 @@ const applyCtx = (text, ctx) =>
 
 /* Génère le fichier Word (.docx) d'un modèle. */
 export async function renderDocx(t, of, ctx = {}) {
-  const children = [new Paragraph({ children: [new TextRun({ text: of.name, bold: true, size: 26 })] })];
+  const children = [];
+  const logo = parseLogo(of.logo);
+  if (logo) {
+    try {
+      children.push(new Paragraph({ children: [new ImageRun({ type: logo.type, data: logo.buffer, transformation: { width: 130, height: 46 } })] }));
+    } catch { /* logo illisible : on ignore */ }
+  }
+  children.push(new Paragraph({ children: [new TextRun({ text: of.name, bold: true, size: 26 })] }));
   const meta = [`Déclaration d'activité n° ${of.nda}`, of.address, [of.email, of.phone].filter(Boolean).join(' · ')].filter(Boolean);
   meta.forEach((m, i) => children.push(new Paragraph({ spacing: { after: i === meta.length - 1 ? 200 : 0 }, children: [new TextRun({ text: m, size: 18, color: '777777' })] })));
   children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t.title)] }));
@@ -40,6 +54,10 @@ export function renderPdf(t, of, ctx = {}) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
+    const logo = parseLogo(of.logo);
+    if (logo) {
+      try { doc.image(logo.buffer, { fit: [130, 46] }); doc.moveDown(0.4); } catch { /* logo illisible */ }
+    }
     doc.font('Helvetica-Bold').fontSize(14).fillColor('#1F2A44').text(of.name);
     doc.font('Helvetica').fontSize(9).fillColor('#777777');
     doc.text(`Déclaration d'activité n° ${of.nda}`);

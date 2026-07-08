@@ -243,7 +243,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [me, setMe] = useState(null);
-  const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '' });
+  const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
   const [myUserId, setMyUserId] = useState(null);
@@ -275,7 +275,7 @@ export default function App() {
       .finally(() => setLoading(false));
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(setMe).catch(() => {});
     fetch('/api/profile').then(r => r.ok ? r.json() : null).then(p => {
-      if (p) setProfile({ name: p.name || '', nda: p.nda || '', address: p.address || '', email: p.email || '', phone: p.phone || '' });
+      if (p) setProfile({ name: p.name || '', nda: p.nda || '', address: p.address || '', email: p.email || '', phone: p.phone || '', logo: p.logo || '' });
     }).catch(() => {});
     fetch('/api/team').then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
@@ -290,9 +290,19 @@ export default function App() {
     setOrgMsg('');
     const r = await fetch('/api/profile', { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(profile) }).then(x => x.json());
     if (r.error) { setOrgMsg(r.error); return; }
-    setProfile({ name: r.name || '', nda: r.nda || '', address: r.address || '', email: r.email || '', phone: r.phone || '' });
+    setProfile({ name: r.name || '', nda: r.nda || '', address: r.address || '', email: r.email || '', phone: r.phone || '', logo: r.logo || '' });
     setMe(m => (m ? { ...m, ofName: r.name } : m));
     setOrgMsg('Profil enregistré.');
+  };
+  const onLogo = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!/image\/(png|jpe?g)/.test(f.type)) { setOrgMsg('Logo : PNG ou JPG uniquement.'); return; }
+    if (f.size > 500 * 1024) { setOrgMsg('Logo trop volumineux (max 500 Ko).'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setProfile(p => ({ ...p, logo: reader.result }));
+    reader.readAsDataURL(f);
+    e.target.value = '';
   };
   const addTeamUser = async () => {
     setOrgMsg('');
@@ -1358,6 +1368,19 @@ export default function App() {
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">Profil de l&apos;organisme</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Ces informations apparaissent en en-tête des documents générés.</p>
+                </div>
+                <div>
+                  <label className={lbl}>Logo (PNG/JPG — apparaît sur les documents générés)</label>
+                  <div className="flex items-center gap-3">
+                    {profile.logo
+                      ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={profile.logo} alt="logo" className="h-10 w-auto max-w-[120px] object-contain rounded border border-slate-100" />
+                      : <div className="h-10 w-24 rounded border border-dashed border-slate-200 flex items-center justify-center text-[9px] text-slate-300">aucun</div>}
+                    <label className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer')}>
+                      <Upload className="w-3.5 h-3.5" /> Choisir
+                      <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onLogo} />
+                    </label>
+                    {profile.logo && <button onClick={() => setProfile(p => ({ ...p, logo: '' }))} className="text-[10px] text-red-500 hover:underline">retirer</button>}
+                  </div>
                 </div>
                 <Field label="Nom de l'organisme" full><input className={inp} value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} /></Field>
                 <Row2>

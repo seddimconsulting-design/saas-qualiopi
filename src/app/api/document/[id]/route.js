@@ -38,7 +38,7 @@ export async function GET(req, { params }) {
   if (!t) return NextResponse.json({ error: 'Modèle inconnu' }, { status: 404 });
   const sp = new URL(req.url).searchParams;
   const format = sp.get('format') || 'pdf';
-  const tRows = await q('SELECT name, nda, address, email, phone FROM app_tenants WHERE id = $1', [session.tenantId]);
+  const tRows = await q('SELECT name, nda, address, email, phone, logo FROM app_tenants WHERE id = $1', [session.tenantId]);
   const tp = tRows[0] || {};
   const of = {
     name: tp.name || session.ofName || OF.name,
@@ -46,9 +46,11 @@ export async function GET(req, { params }) {
     address: tp.address || '',
     email: tp.email || '',
     phone: tp.phone || '',
+    logo: tp.logo || '',
   };
   try {
     const ctx = await buildContext(sp.get('sessionId'), sp.get('traineeId'), session.tenantId);
+    Object.assign(ctx, { ofName: of.name, ofNda: of.nda, ofAddress: of.address, ofEmail: of.email, ofPhone: of.phone });
     if (format === 'docx') {
       const buf = await renderDocx(t, of, ctx);
       return new NextResponse(buf, {

@@ -184,6 +184,7 @@ ALTER TABLE indicator_status ADD CONSTRAINT indicator_status_pkey PRIMARY KEY (t
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS logo TEXT;
 ALTER TABLE app_users   ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
 -- Le premier utilisateur de chaque organisme est propriétaire
 UPDATE app_users u SET role = 'owner'

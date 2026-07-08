@@ -142,14 +142,14 @@ export const TEMPLATES = [
       { h: 'Intitulé, objectifs et résultats', body: "Intitulé : ………. Objectifs : ………. Résultats / indicateurs communiqués : ………." },
       { h: 'Public, prérequis et modalités', body: "Public visé : ………. Prérequis : ………. Modalités : présentiel / distanciel." },
       { h: 'Délais et modalités d\'accès', body: "Délai d'accès après demande : ……… jours. Modalités d'inscription : ………. Tarif : ………." },
-      { h: 'Accessibilité et contact', body: "Accessibilité aux personnes en situation de handicap : contacter le référent handicap. Contact : ………." },
+      { h: 'Accessibilité et contact', body: "Accessibilité aux personnes en situation de handicap : contacter le référent handicap. Contact : {{ofEmail}} · {{ofPhone}} · {{ofAddress}}." },
     ],
   },
   {
     id: 'fiche-formateur', indicators: [7, 18], title: 'Fiche de qualification du formateur',
     intro: "Cette fiche justifie la qualification et les compétences du formateur intervenant.",
     sections: [
-      { h: 'Identité et domaine', body: "Nom / Prénom : ………. Domaine d'expertise : ………." },
+      { h: 'Identité et domaine', body: "Nom / Prénom : {{trainer}}. Domaine d'expertise : ………." },
       { h: 'Diplômes et titres', body: "Diplômes : ………. Certifications / habilitations : ………." },
       { h: 'Expérience professionnelle', body: "Nombre d'années d'expérience : ………. Secteurs : ………." },
       { h: 'Compétences pédagogiques', body: "Expérience de formation, méthodes maîtrisées, formations suivies : ………." },
@@ -177,7 +177,7 @@ export const TEMPLATES = [
     id: 'attestation-locaux', indicators: [21], title: 'Fiche des locaux et accessibilité',
     intro: "Description des locaux de formation et de leur accessibilité.",
     sections: [
-      { h: 'Locaux', body: "Adresse : ………. Capacité d'accueil : ………. Équipements des salles : ………." },
+      { h: 'Locaux', body: "Adresse : {{ofAddress}}. Capacité d'accueil : ………. Équipements des salles : ………." },
       { h: 'Accessibilité PMR', body: "Conformité ERP / accessibilité aux personnes à mobilité réduite : ………." },
       { h: 'Sécurité', body: "Consignes de sécurité et d'évacuation affichées : oui / non." },
     ],
