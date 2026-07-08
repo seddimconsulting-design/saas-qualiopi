@@ -22,7 +22,7 @@ export async function POST(req) {
     const name = (ofName || 'Mon organisme').trim();
     await q('INSERT INTO app_tenants (id, name) VALUES ($1, $2)', [tenantId, name]);
     const hash = await bcrypt.hash(password, 10);
-    await q('INSERT INTO app_users (id, tenant_id, email, password_hash, name) VALUES ($1, $2, $3, $4, $5)',
+    await q("INSERT INTO app_users (id, tenant_id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5, 'owner')",
       [userId, tenantId, mail, hash, name]);
 
     const token = await createToken({ userId, tenantId, email: mail, ofName: name });

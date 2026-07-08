@@ -10,11 +10,10 @@ const applyCtx = (text, ctx) =>
 
 /* Génère le fichier Word (.docx) d'un modèle. */
 export async function renderDocx(t, of, ctx = {}) {
-  const children = [
-    new Paragraph({ children: [new TextRun({ text: of.name, bold: true, size: 26 })] }),
-    new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: `Déclaration d'activité n° ${of.nda}`, size: 18, color: '777777' })] }),
-    new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t.title)] }),
-  ];
+  const children = [new Paragraph({ children: [new TextRun({ text: of.name, bold: true, size: 26 })] })];
+  const meta = [`Déclaration d'activité n° ${of.nda}`, of.address, [of.email, of.phone].filter(Boolean).join(' · ')].filter(Boolean);
+  meta.forEach((m, i) => children.push(new Paragraph({ spacing: { after: i === meta.length - 1 ? 200 : 0 }, children: [new TextRun({ text: m, size: 18, color: '777777' })] })));
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t.title)] }));
   if (t.intro) children.push(new Paragraph({ spacing: { after: 160 }, children: [new TextRun(applyCtx(t.intro, ctx))] }));
   for (const s of t.sections) {
     children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(s.h)] }));
@@ -42,7 +41,11 @@ export function renderPdf(t, of, ctx = {}) {
     doc.on('error', reject);
 
     doc.font('Helvetica-Bold').fontSize(14).fillColor('#1F2A44').text(of.name);
-    doc.font('Helvetica').fontSize(9).fillColor('#777777').text(`Déclaration d'activité n° ${of.nda}`);
+    doc.font('Helvetica').fontSize(9).fillColor('#777777');
+    doc.text(`Déclaration d'activité n° ${of.nda}`);
+    if (of.address) doc.text(of.address);
+    const contact = [of.email, of.phone].filter(Boolean).join(' · ');
+    if (contact) doc.text(contact);
     doc.moveDown(1).fillColor('#000000');
     doc.font('Helvetica-Bold').fontSize(17).text(t.title);
     doc.moveDown(0.6);

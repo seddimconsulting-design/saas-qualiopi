@@ -7,7 +7,7 @@ import {
   Save, ChevronRight, TrendingUp, BarChart3, Euro, Calendar,
   Clock, Star, Building2, CreditCard, ClipboardList, Bell,
   BookOpen, Shield, Award, X, Filter, Search, Download,
-  ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut
+  ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut, Settings
 } from 'lucide-react';
 import { TEMPLATES } from '@/lib/doc-templates';
 
@@ -214,6 +214,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [me, setMe] = useState(null);
+  const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '' });
+  const [team, setTeam] = useState([]);
+  const [myRole, setMyRole] = useState(null);
+  const [myUserId, setMyUserId] = useState(null);
+  const [teamForm, setTeamForm] = useState({ email: '', password: '', name: '' });
+  const [orgMsg, setOrgMsg] = useState('');
   const [aiForm, setAiForm] = useState({ filename: '', text: '' });
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -239,11 +245,38 @@ export default function App() {
       .catch(e => setDbError(e.message))
       .finally(() => setLoading(false));
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(setMe).catch(() => {});
+    fetch('/api/profile').then(r => r.ok ? r.json() : null).then(p => {
+      if (p) setProfile({ name: p.name || '', nda: p.nda || '', address: p.address || '', email: p.email || '', phone: p.phone || '' });
+    }).catch(() => {});
+    fetch('/api/team').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
+    }).catch(() => {});
   }, []);
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
+  };
+  const saveProfile = async () => {
+    setOrgMsg('');
+    const r = await fetch('/api/profile', { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(profile) }).then(x => x.json());
+    if (r.error) { setOrgMsg(r.error); return; }
+    setProfile({ name: r.name || '', nda: r.nda || '', address: r.address || '', email: r.email || '', phone: r.phone || '' });
+    setMe(m => (m ? { ...m, ofName: r.name } : m));
+    setOrgMsg('Profil enregistré.');
+  };
+  const addTeamUser = async () => {
+    setOrgMsg('');
+    if (!teamForm.email.trim() || !teamForm.password) return;
+    const r = await fetch('/api/team', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(teamForm) }).then(x => x.json());
+    if (r.error) { setOrgMsg(r.error); return; }
+    setTeam(p => [...p, r.user]);
+    setTeamForm({ email: '', password: '', name: '' });
+  };
+  const removeTeamUser = async (id) => {
+    const r = await fetch(`/api/team/${id}`, { method: 'DELETE' }).then(x => x.json());
+    if (r.error) { setOrgMsg(r.error); return; }
+    setTeam(p => p.filter(u => u.id !== id));
   };
 
   /* helpers API */
@@ -430,6 +463,7 @@ export default function App() {
     { key: 'documents',    icon: FileText,        label: 'Documents types' },
     { key: 'crm',          icon: Building2,       label: 'CRM' },
     { key: 'facturation',  icon: Euro,            label: 'Devis & Facturation' },
+    { key: 'organisme',    icon: Settings,        label: 'Mon organisme' },
   ];
 
   /* ── shared styles ── */
@@ -1137,8 +1171,8 @@ export default function App() {
                   <p className="text-[10px] text-slate-400 mt-0.5">Importez un fichier (ou collez le texte) — l'IA le rattache à l'indicateur Qualiopi concerné.</p>
                 </div>
                 <label className={cls(btn, 'w-full justify-center border border-dashed border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer')}>
-                  <Upload className="w-3.5 h-3.5" /> {extracting ? 'Extraction en cours…' : 'Importer un fichier (PDF, DOCX, TXT)'}
-                  <input type="file" accept=".pdf,.docx,.txt,.md,.csv" className="hidden" onChange={onFile} disabled={extracting} />
+                  <Upload className="w-3.5 h-3.5" /> {extracting ? 'Extraction en cours (OCR si scanné)…' : 'Importer un fichier (PDF, image scannée, DOCX, TXT)'}
+                  <input type="file" accept=".pdf,.docx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp,.tif,.tiff" className="hidden" onChange={onFile} disabled={extracting} />
                 </label>
                 <Field label="Nom du document"><input className={inp} placeholder="ex : Feuille d'émargement session Next.js" value={aiForm.filename} onChange={e => setAiForm(p => ({ ...p, filename: e.target.value }))} /></Field>
                 <div>
@@ -1270,6 +1304,63 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════ MON ORGANISME ══════════════ */}
+          {tab === 'organisme' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Profil */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900">Profil de l&apos;organisme</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Ces informations apparaissent en en-tête des documents générés.</p>
+                </div>
+                <Field label="Nom de l'organisme" full><input className={inp} value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} /></Field>
+                <Row2>
+                  <Field label="N° de déclaration d'activité"><input className={inp} value={profile.nda} onChange={e => setProfile(p => ({ ...p, nda: e.target.value }))} /></Field>
+                  <Field label="Téléphone"><input className={inp} value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} /></Field>
+                </Row2>
+                <Field label="Adresse" full><input className={inp} value={profile.address} onChange={e => setProfile(p => ({ ...p, address: e.target.value }))} /></Field>
+                <Field label="E-mail de contact" full><input className={inp} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></Field>
+                <button onClick={saveProfile} className={cls(btn, 'bg-indigo-600 text-white hover:bg-indigo-700')}><Save className="w-3.5 h-3.5" /> Enregistrer</button>
+                {orgMsg && <p className="text-[11px] text-emerald-600 font-semibold">{orgMsg}</p>}
+              </div>
+
+              {/* Équipe */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900">Utilisateurs de l&apos;organisme</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Les membres partagent le même espace. Vos données restent isolées de tout autre OF.</p>
+                </div>
+                <div className="divide-y divide-slate-50 border border-slate-100 rounded-xl">
+                  {team.map(u => (
+                    <div key={u.id} className="px-3 py-2.5 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-700 shrink-0">{(u.name || u.email || '?').slice(0, 2).toUpperCase()}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate">{u.name || u.email}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
+                      </div>
+                      <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border', u.role === 'owner' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200')}>{u.role === 'owner' ? 'Propriétaire' : 'Membre'}</span>
+                      {myRole === 'owner' && u.id !== myUserId && u.role !== 'owner' && (
+                        <button onClick={() => removeTeamUser(u.id)} className="p-1 rounded-lg hover:bg-red-50 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {myRole === 'owner' ? (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ajouter un utilisateur</p>
+                    <Row2>
+                      <Field label="Nom"><input className={inp} value={teamForm.name} onChange={e => setTeamForm(p => ({ ...p, name: e.target.value }))} /></Field>
+                      <Field label="E-mail"><input className={inp} type="email" value={teamForm.email} onChange={e => setTeamForm(p => ({ ...p, email: e.target.value }))} /></Field>
+                    </Row2>
+                    <Field label="Mot de passe (6 caractères min.)" full><input className={inp} type="password" value={teamForm.password} onChange={e => setTeamForm(p => ({ ...p, password: e.target.value }))} /></Field>
+                    <button onClick={addTeamUser} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}><Plus className="w-3.5 h-3.5" /> Ajouter le membre</button>
+                  </div>
+                ) : <p className="text-[11px] text-slate-400">Seul le propriétaire peut ajouter des utilisateurs.</p>}
+                {orgMsg && <p className="text-[11px] text-red-600 font-semibold">{orgMsg}</p>}
               </div>
             </div>
           )}

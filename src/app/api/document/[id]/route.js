@@ -38,7 +38,15 @@ export async function GET(req, { params }) {
   if (!t) return NextResponse.json({ error: 'Modèle inconnu' }, { status: 404 });
   const sp = new URL(req.url).searchParams;
   const format = sp.get('format') || 'pdf';
-  const of = { name: session.ofName || OF.name, nda: OF.nda };
+  const tRows = await q('SELECT name, nda, address, email, phone FROM app_tenants WHERE id = $1', [session.tenantId]);
+  const tp = tRows[0] || {};
+  const of = {
+    name: tp.name || session.ofName || OF.name,
+    nda: tp.nda || OF.nda,
+    address: tp.address || '',
+    email: tp.email || '',
+    phone: tp.phone || '',
+  };
   try {
     const ctx = await buildContext(sp.get('sessionId'), sp.get('traineeId'), session.tenantId);
     if (format === 'docx') {

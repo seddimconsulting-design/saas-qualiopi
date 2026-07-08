@@ -179,3 +179,13 @@ ALTER TABLE indicator_status ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 UPDATE indicator_status SET tenant_id = 'demo-tenant' WHERE tenant_id IS NULL;
 ALTER TABLE indicator_status DROP CONSTRAINT IF EXISTS indicator_status_pkey;
 ALTER TABLE indicator_status ADD CONSTRAINT indicator_status_pkey PRIMARY KEY (tenant_id, indicator_id);
+
+-- ─── Profil de l'organisme + rôles utilisateurs ───
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE app_users   ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+-- Le premier utilisateur de chaque organisme est propriétaire
+UPDATE app_users u SET role = 'owner'
+WHERE role IS DISTINCT FROM 'owner'
+  AND NOT EXISTS (SELECT 1 FROM app_users u2 WHERE u2.tenant_id = u.tenant_id AND u2.created_at < u.created_at);
