@@ -13,9 +13,9 @@ export const TEMPLATES = [
     intro: "Entre l'organisme de formation soussigné et le client (l'entreprise ou le bénéficiaire), il est convenu ce qui suit, en application des articles L.6353-1 et suivants du Code du travail.",
     sections: [
       { h: 'Article 1 — Objet et nature de l\'action', body: "La présente convention a pour objet la réalisation d'une action de formation professionnelle entrant dans le champ de l'article L.6313-1 du Code du travail." },
-      { h: 'Article 2 — Intitulé, durée et effectif', body: "Intitulé de l'action : …………. Durée totale : ……… heures. Dates : du ……/……/……… au ……/……/………. Nombre de participants : ………." },
-      { h: 'Article 3 — Modalités et moyens pédagogiques', body: "Modalité : présentiel / distanciel / mixte. Moyens mobilisés : supports pédagogiques, plateforme, exercices et évaluations. Une attestation de fin de formation sera remise à chaque participant." },
-      { h: 'Article 4 — Prix et modalités de règlement', body: "Le coût de l'action s'élève à ……… € net de taxe, réglable à réception de facture. En cas de prise en charge par un financeur, le règlement s'effectue selon les modalités convenues avec celui-ci." },
+      { h: 'Article 2 — Intitulé, durée et effectif', body: "Intitulé de l'action : {{sessionTitle}}. Durée totale : {{duration}}. Dates : du {{startDate}} au {{endDate}}. Nombre de participants : {{traineesCount}}." },
+      { h: 'Article 3 — Modalités et moyens pédagogiques', body: "Modalité : {{modality}}. Moyens mobilisés : supports pédagogiques, plateforme, exercices et évaluations. Une attestation de fin de formation sera remise à chaque participant." },
+      { h: 'Article 4 — Prix et modalités de règlement', body: "Le coût de l'action s'élève à {{price}} € net de taxe, réglable à réception de facture. En cas de prise en charge par un financeur, le règlement s'effectue selon les modalités convenues avec celui-ci." },
       { h: 'Article 5 — Dédit, abandon et différend', body: "En cas d'annulation à l'initiative du client moins de …… jours avant le début de l'action, ……. En cas de différend, les parties s'efforcent de le régler à l'amiable." },
     ],
     signature: true,
@@ -38,7 +38,7 @@ export const TEMPLATES = [
       { h: 'Objectifs pédagogiques', body: "À l'issue de la formation, le participant sera capable de : ……… (objectifs opérationnels et évaluables)." },
       { h: 'Public visé et prérequis', body: "Public : ………. Prérequis : ………." },
       { h: 'Contenu', body: "Module 1 : ………. Module 2 : ………. Module 3 : ………." },
-      { h: 'Durée et modalités', body: "Durée : ……… heures. Modalité : présentiel / distanciel. Effectif : de …… à …… participants." },
+      { h: 'Durée et modalités', body: "Durée : {{duration}}. Modalité : {{modality}}. Effectif : de …… à …… participants." },
       { h: 'Méthodes et moyens pédagogiques', body: "Apports théoriques, mises en situation, supports remis, évaluations formatives." },
       { h: 'Modalités d\'évaluation', body: "Évaluation des acquis en cours et en fin de formation (quiz, exercices, mise en situation). Une attestation de fin de formation est délivrée." },
       { h: 'Accessibilité aux personnes en situation de handicap', body: "Pour tout besoin d'adaptation, contactez notre référent handicap (voir fiche dédiée)." },
@@ -46,7 +46,7 @@ export const TEMPLATES = [
   },
   {
     id: 'emargement', indicator: 12, title: 'Feuille d\'émargement',
-    intro: "Intitulé de la session : …………. Date : ……/……/………. Formateur : …………. Lieu : …………",
+    intro: "Intitulé de la session : {{sessionTitle}}. Dates : du {{startDate}} au {{endDate}}. Formateur : {{trainer}}. Lieu : …………",
     sections: [
       { h: 'Attestation de présence', body: "Les participants attestent de leur présence à la session par leur signature, par demi-journée." },
       { h: 'Participants (matin / après-midi)', body: "1. Nom Prénom …………………………  Signature matin ……………  Signature après-midi ……………\n2. Nom Prénom …………………………  Signature matin ……………  Signature après-midi ……………\n3. Nom Prénom …………………………  Signature matin ……………  Signature après-midi ……………\n4. Nom Prénom …………………………  Signature matin ……………  Signature après-midi ……………" },
@@ -57,7 +57,7 @@ export const TEMPLATES = [
     id: 'positionnement', indicator: 8, title: 'Fiche de positionnement et d\'analyse du besoin',
     intro: "Cette fiche est renseignée avant l'entrée en formation afin d'adapter la prestation au bénéficiaire.",
     sections: [
-      { h: 'Identité du bénéficiaire', body: "Nom / Prénom : ………. Fonction : ………. Entreprise : ………." },
+      { h: 'Identité du bénéficiaire', body: "Nom / Prénom : {{traineeName}}. Courriel : {{traineeEmail}}. Fonction : ………. Entreprise : ………." },
       { h: 'Attentes et objectifs', body: "Objectifs visés par le bénéficiaire / l'entreprise : ………." },
       { h: 'Prérequis et niveau initial', body: "Prérequis vérifiés : oui / non. Niveau initial estimé : ………." },
       { h: 'Adaptations nécessaires', body: "Besoin d'aménagement (handicap, contraintes) : ……… (voir référent handicap si besoin)." },
@@ -87,8 +87,8 @@ export const TEMPLATES = [
     id: 'attestation-fin', indicator: 10, title: 'Certificat de réalisation',
     intro: "L'organisme de formation atteste de la réalisation de l'action de formation ci-dessous.",
     sections: [
-      { h: 'Bénéficiaire', body: "Je soussigné(e), représentant de l'organisme, atteste que : Nom / Prénom : ……… a suivi l'action de formation suivante." },
-      { h: 'Action de formation', body: "Intitulé : ………. Nature : action de formation. Durée : ……… heures. Dates : du ……/……/……… au ……/……/………." },
+      { h: 'Bénéficiaire', body: "Je soussigné(e), représentant de l'organisme, atteste que : Nom / Prénom : {{traineeName}} a suivi l'action de formation suivante." },
+      { h: 'Action de formation', body: "Intitulé : {{sessionTitle}}. Nature : action de formation. Durée : {{duration}}. Dates : du {{startDate}} au {{endDate}}." },
       { h: 'Résultat', body: "La formation a été suivie en totalité et les objectifs pédagogiques ont été atteints / partiellement atteints." },
     ],
     signature: true,

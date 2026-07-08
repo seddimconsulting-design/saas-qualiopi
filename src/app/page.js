@@ -217,6 +217,8 @@ export default function App() {
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [docSession, setDocSession] = useState('');
+  const [docTrainee, setDocTrainee] = useState('');
 
   useEffect(() => {
     fetch('/api/bootstrap')
@@ -369,6 +371,10 @@ export default function App() {
 
   /* moteur de preuve IA : analyse d'un document -> indicateur */
   const indLabel = (id) => INDICATEURS.find(i => i.id === id)?.label || '';
+  const docUrl = (id, fmt) => {
+    const qs = [docSession && `sessionId=${docSession}`, docTrainee && `traineeId=${docTrainee}`].filter(Boolean).join('&');
+    return `/api/document/${id}?format=${fmt}${qs ? '&' + qs : ''}`;
+  };
   const analyzeDoc = async () => {
     if (!aiForm.text.trim()) return;
     setAiLoading(true); setAiResult(null);
@@ -1220,7 +1226,26 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100">
                 <h3 className="text-xs font-extrabold text-slate-900">Bibliothèque de modèles conformes</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi — téléchargeables en PDF et Word, à personnaliser.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi — téléchargeables en PDF et Word.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className={lbl}>Pré-remplir pour la session</label>
+                    <select className={inp} value={docSession} onChange={e => setDocSession(e.target.value)}>
+                      <option value="">— Modèle vierge —</option>
+                      {sessions.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Pour le stagiaire (attestation, positionnement)</label>
+                    <select className={inp} value={docTrainee} onChange={e => setDocTrainee(e.target.value)}>
+                      <option value="">— Aucun —</option>
+                      {trainees.map(t => <option key={t.id} value={t.id}>{t.first} {t.last}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {(docSession || docTrainee) && (
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-2">Les documents seront pré-remplis avec les données sélectionnées.</p>
+                )}
               </div>
               <div className="divide-y divide-slate-50">
                 {TEMPLATES.map(tpl => (
@@ -1231,8 +1256,8 @@ export default function App() {
                       <p className="text-[10px] text-slate-400">Ind. {tpl.indicator} — {indLabel(tpl.indicator)}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <a href={`/api/document/${tpl.id}?format=pdf`} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}><Download className="w-3.5 h-3.5" /> PDF</a>
-                      <a href={`/api/document/${tpl.id}?format=docx`} className={cls(btn, 'bg-indigo-600 text-white hover:bg-indigo-700')}><Download className="w-3.5 h-3.5" /> Word</a>
+                      <a href={docUrl(tpl.id, 'pdf')} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}><Download className="w-3.5 h-3.5" /> PDF</a>
+                      <a href={docUrl(tpl.id, 'docx')} className={cls(btn, 'bg-indigo-600 text-white hover:bg-indigo-700')}><Download className="w-3.5 h-3.5" /> Word</a>
                     </div>
                   </div>
                 ))}

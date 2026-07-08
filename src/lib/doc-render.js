@@ -1,17 +1,24 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import PDFDocument from 'pdfkit';
 
+/* Remplace les jetons {{token}} par les données réelles (ou une ligne à compléter). */
+const applyCtx = (text, ctx) =>
+  (text || '').replace(/\{\{(\w+)\}\}/g, (_, k) => {
+    const v = ctx[k];
+    return v !== undefined && v !== null && v !== '' ? String(v) : '……………';
+  });
+
 /* Génère le fichier Word (.docx) d'un modèle. */
-export async function renderDocx(t, of) {
+export async function renderDocx(t, of, ctx = {}) {
   const children = [
     new Paragraph({ children: [new TextRun({ text: of.name, bold: true, size: 26 })] }),
     new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: `Déclaration d'activité n° ${of.nda}`, size: 18, color: '777777' })] }),
     new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(t.title)] }),
   ];
-  if (t.intro) children.push(new Paragraph({ spacing: { after: 160 }, children: [new TextRun(t.intro)] }));
+  if (t.intro) children.push(new Paragraph({ spacing: { after: 160 }, children: [new TextRun(applyCtx(t.intro, ctx))] }));
   for (const s of t.sections) {
     children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(s.h)] }));
-    for (const line of s.body.split('\n')) {
+    for (const line of applyCtx(s.body, ctx).split('\n')) {
       children.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun(line)] }));
     }
   }
@@ -26,7 +33,7 @@ export async function renderDocx(t, of) {
 }
 
 /* Génère le fichier PDF d'un modèle. */
-export function renderPdf(t, of) {
+export function renderPdf(t, of, ctx = {}) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 56 });
     const chunks = [];
@@ -39,10 +46,10 @@ export function renderPdf(t, of) {
     doc.moveDown(1).fillColor('#000000');
     doc.font('Helvetica-Bold').fontSize(17).text(t.title);
     doc.moveDown(0.6);
-    if (t.intro) { doc.font('Helvetica').fontSize(10).text(t.intro, { align: 'justify' }); doc.moveDown(0.6); }
+    if (t.intro) { doc.font('Helvetica').fontSize(10).text(applyCtx(t.intro, ctx), { align: 'justify' }); doc.moveDown(0.6); }
     for (const s of t.sections) {
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#2E5AAC').text(s.h);
-      doc.font('Helvetica').fontSize(10).fillColor('#000000').text(s.body, { align: 'left' });
+      doc.font('Helvetica').fontSize(10).fillColor('#000000').text(applyCtx(s.body, ctx), { align: 'left' });
       doc.moveDown(0.6);
     }
     if (t.signature) {
