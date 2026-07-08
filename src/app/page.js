@@ -11,6 +11,35 @@ import {
 } from 'lucide-react';
 import { TEMPLATES } from '@/lib/doc-templates';
 
+const IMG_EXT = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tif', 'tiff'];
+
+/* OCR côté navigateur (tesseract.js en français). */
+async function ocrImageClient(fileOrCanvas) {
+  const Tesseract = (await import('tesseract.js')).default;
+  const { data } = await Tesseract.recognize(fileOrCanvas, 'fra');
+  return (data.text || '').trim();
+}
+
+/* OCR d'un PDF scanné : rasterisation via pdf.js puis OCR (max 5 pages). */
+async function ocrPdfClient(file) {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  const n = Math.min(pdf.numPages, 5);
+  let text = '';
+  for (let i = 1; i <= n; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    text += (await ocrImageClient(canvas)) + '\n';
+  }
+  return text.trim();
+}
+
 /* ─── helpers ─── */
 const cls = (...args) => args.filter(Boolean).join(' ');
 const STATUS_BADGE = {
@@ -437,13 +466,26 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     setExtracting(true); setAiResult(null);
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await fetch('/api/extract', { method: 'POST', body: fd }).then(x => x.json());
-      if (r.error) setAiResult({ error: r.error });
-      else setAiForm({ filename: r.filename, text: r.text });
-    } catch (err) { setAiResult({ error: err.message }); }
+      if (IMG_EXT.includes(ext)) {
+        // Image : OCR directement dans le navigateur
+        const text = await ocrImageClient(file);
+        setAiForm({ filename: file.name, text });
+      } else {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch('/api/extract', { method: 'POST', body: fd }).then(x => x.json());
+        if (r.error) setAiResult({ error: r.error });
+        else if (r.scanned) {
+          // PDF scanné : OCR dans le navigateur (rasterisation pdf.js)
+          const text = await ocrPdfClient(file);
+          setAiForm({ filename: file.name, text });
+        } else {
+          setAiForm({ filename: r.filename, text: r.text });
+        }
+      }
+    } catch (err) { setAiResult({ error: `OCR / extraction : ${err.message}` }); }
     setExtracting(false);
     e.target.value = '';
   };
