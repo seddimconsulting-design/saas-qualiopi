@@ -42,7 +42,7 @@ export default function LoginPage() {
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-lg font-black text-slate-900 tracking-tight">QualiSaaS</p>
+            <p className="text-lg font-black text-slate-900 tracking-tight">Certivia</p>
             <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Pilotage Qualiopi</p>
           </div>
         </div>

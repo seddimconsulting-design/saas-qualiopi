@@ -1,7 +1,7 @@
 /* Envoi d'e-mail via Resend (API HTTP). Sans RESEND_API_KEY : ne fait rien. */
 export async function sendResetEmail(to, link) {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || 'QualiSaaS <onboarding@resend.dev>';
+  const from = process.env.RESEND_FROM || 'Certivia <onboarding@resend.dev>';
   if (!key) return { sent: false, reason: 'no-key' };
   try {
     const res = await fetch('https://api.resend.com/emails', {

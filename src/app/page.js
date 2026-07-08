@@ -557,7 +557,7 @@ export default function App() {
               <GraduationCap className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-black text-slate-900 tracking-tight">QualiSaaS</p>
+              <p className="text-sm font-black text-slate-900 tracking-tight">Certivia</p>
               <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest">Qualiopi</p>
             </div>
           </div>

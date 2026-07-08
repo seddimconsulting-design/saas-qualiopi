@@ -37,7 +37,7 @@ export default function ResetPage() {
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 justify-center mb-6">
           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-white" /></div>
-          <p className="text-lg font-black text-slate-900 tracking-tight">QualiSaaS</p>
+          <p className="text-lg font-black text-slate-900 tracking-tight">Certivia</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <h1 className="text-sm font-extrabold text-slate-900 mb-4">Nouveau mot de passe</h1>
