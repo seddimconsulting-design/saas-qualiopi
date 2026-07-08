@@ -1,0 +1,27 @@
+/* Envoi d'e-mail via Resend (API HTTP). Sans RESEND_API_KEY : ne fait rien. */
+export async function sendResetEmail(to, link) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM || 'QualiSaaS <onboarding@resend.dev>';
+  if (!key) return { sent: false, reason: 'no-key' };
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from,
+        to,
+        subject: 'Réinitialisation de votre mot de passe',
+        html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2a44">
+          <p>Bonjour,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous (valable 1&nbsp;heure) :</p>
+          <p><a href="${link}" style="color:#2e5aac">${link}</a></p>
+          <p style="color:#777">Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
+        </div>`,
+      }),
+    });
+    if (!res.ok) return { sent: false, reason: await res.text() };
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, reason: e.message };
+  }
+}

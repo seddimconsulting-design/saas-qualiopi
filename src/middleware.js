@@ -15,8 +15,9 @@ export async function middleware(req) {
   const token = req.cookies.get('session')?.value;
   const authed = await isAuthed(token);
 
-  // Routes d'auth : toujours ouvertes
+  // Routes d'auth + page de réinitialisation : toujours ouvertes
   if (pathname.startsWith('/api/auth')) return NextResponse.next();
+  if (pathname === '/reset') return NextResponse.next();
 
   // Autres API : authentification requise
   if (pathname.startsWith('/api')) {
@@ -33,5 +34,5 @@ export async function middleware(req) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/api/:path*'],
+  matcher: ['/', '/login', '/reset', '/api/:path*'],
 };

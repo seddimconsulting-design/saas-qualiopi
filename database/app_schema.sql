@@ -186,6 +186,13 @@ ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS logo TEXT;
 ALTER TABLE app_users   ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'member';
+
+CREATE TABLE IF NOT EXISTS password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 -- Le premier utilisateur de chaque organisme est propriétaire
 UPDATE app_users u SET role = 'owner'
 WHERE role IS DISTINCT FROM 'owner'
