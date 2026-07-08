@@ -1226,7 +1226,7 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100">
                 <h3 className="text-xs font-extrabold text-slate-900">Bibliothèque de modèles conformes</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi — téléchargeables en PDF et Word.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi · {new Set(TEMPLATES.flatMap(t => t.indicators)).size}/32 indicateurs couverts — téléchargeables en PDF et Word.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div>
                     <label className={lbl}>Pré-remplir pour la session</label>
@@ -1253,7 +1253,7 @@ export default function App() {
                     <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-slate-400" /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-900">{tpl.title}</p>
-                      <p className="text-[10px] text-slate-400">Ind. {tpl.indicator} — {indLabel(tpl.indicator)}</p>
+                      <p className="text-[10px] text-slate-400">Ind. {tpl.indicators.join(', ')} — {indLabel(tpl.indicators[0])}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <a href={docUrl(tpl.id, 'pdf')} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}><Download className="w-3.5 h-3.5" /> PDF</a>
