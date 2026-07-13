@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GraduationCap } from 'lucide-react';
 
 export default function LoginPage() {
@@ -11,6 +11,19 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
+
+  // Paramètres d'URL : ?mode=signup (créer un compte) ou ?demo=1 (pré-remplir la démo)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('mode') === 'signup') setMode('signup');
+    if (q.get('demo') === '1') {
+      setMode('login');
+      setEmail('demo@certivia.app');
+      setPassword('DemoCertivia2026');
+      setIsDemo(true);
+    }
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -31,38 +44,43 @@ export default function LoginPage() {
     }
   };
 
-  const inp = 'w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-slate-800 placeholder-slate-300';
+  const inp = 'w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white text-slate-800 placeholder-slate-300';
   const lbl = 'block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1';
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 justify-center mb-6">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div>
             <p className="text-lg font-black text-slate-900 tracking-tight">Certivia</p>
-            <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">Pilotage Qualiopi</p>
+            <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Pilotage Qualiopi</p>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          {isDemo && (
+            <div className="mb-5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700">
+              <span className="font-bold">Mode démonstration.</span> Identifiants pré-remplis&nbsp;: cliquez sur «&nbsp;Se connecter&nbsp;» pour explorer un espace déjà rempli.
+            </div>
+          )}
           {mode !== 'forgot' ? (
             <div className="flex gap-2 mb-5 bg-slate-100 rounded-xl p-1">
               <button onClick={() => { setMode('login'); setError(''); }}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${mode === 'login' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${mode === 'login' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>
                 Se connecter
               </button>
               <button onClick={() => { setMode('signup'); setError(''); }}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${mode === 'signup' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${mode === 'signup' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>
                 Créer un compte
               </button>
             </div>
           ) : (
             <div className="mb-5">
               <h1 className="text-sm font-extrabold text-slate-900">Mot de passe oublié</h1>
-              <button onClick={() => { setMode('login'); setError(''); setForgotSent(false); }} className="text-[11px] text-indigo-600 font-bold hover:underline">← Retour à la connexion</button>
+              <button onClick={() => { setMode('login'); setError(''); setForgotSent(false); }} className="text-[11px] text-emerald-600 font-bold hover:underline">← Retour à la connexion</button>
             </div>
           )}
 
@@ -92,13 +110,13 @@ export default function LoginPage() {
               {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">{error}</div>}
 
               <button type="submit" disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition">
+                className="w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 transition">
                 {loading ? 'Veuillez patienter…' : mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon espace' : 'Envoyer le lien'}
               </button>
 
               {mode === 'login' && (
                 <button type="button" onClick={() => { setMode('forgot'); setError(''); setForgotSent(false); }}
-                  className="w-full text-center text-[11px] text-slate-400 hover:text-indigo-600">Mot de passe oublié ?</button>
+                  className="w-full text-center text-[11px] text-slate-400 hover:text-emerald-600">Mot de passe oublié ?</button>
               )}
             </form>
           )}

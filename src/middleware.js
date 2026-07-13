@@ -29,8 +29,9 @@ export async function middleware(req) {
     return authed ? NextResponse.redirect(new URL('/', req.url)) : NextResponse.next();
   }
 
-  // App : authentification requise
-  return authed ? NextResponse.next() : NextResponse.redirect(new URL('/login', req.url));
+  // Page racine : publique. Le composant serveur affiche la landing (visiteur)
+  // ou l'application (utilisateur connecté).
+  return NextResponse.next();
 }
 
 export const config = {
