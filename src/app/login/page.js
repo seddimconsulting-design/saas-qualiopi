@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   // Paramètres d'URL : ?mode=signup (créer un compte) ou ?demo=1 (pré-remplir la démo)
   useEffect(() => {
@@ -27,7 +28,12 @@ export default function LoginPage() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    setError('');
+    if (mode === 'signup' && !acceptTerms) {
+      setError('Vous devez accepter les CGU et la politique de confidentialité.');
+      return;
+    }
+    setLoading(true);
     try {
       if (mode === 'forgot') {
         await fetch('/api/auth/forgot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
@@ -107,6 +113,18 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {mode === 'signup' && (
+                <label className="flex items-start gap-2.5 text-[11px] text-slate-500 leading-snug cursor-pointer">
+                  <input type="checkbox" className="mt-0.5 accent-emerald-600 w-4 h-4 shrink-0"
+                    checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)} />
+                  <span>
+                    J&apos;accepte les{' '}
+                    <a href="/legal/cgu" target="_blank" className="text-emerald-600 font-bold hover:underline">CGU</a>{' '}et la{' '}
+                    <a href="/legal/confidentialite" target="_blank" className="text-emerald-600 font-bold hover:underline">politique de confidentialité</a>.
+                  </span>
+                </label>
+              )}
+
               {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">{error}</div>}
 
               <button type="submit" disabled={loading}
@@ -125,6 +143,11 @@ export default function LoginPage() {
         <p className="text-center text-[11px] text-slate-400 mt-4">
           {mode === 'login' ? "Pas encore de compte ? Cliquez sur « Créer un compte »." : mode === 'signup' ? 'Votre espace est isolé et sécurisé.' : 'Vous recevrez un lien valable 1 heure.'}
         </p>
+        <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-slate-300">
+          <a href="/legal/mentions-legales" className="hover:text-slate-500">Mentions légales</a>
+          <a href="/legal/confidentialite" className="hover:text-slate-500">Confidentialité</a>
+          <a href="/legal/cgu" className="hover:text-slate-500">CGU</a>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import {
   GraduationCap, ShieldCheck, Gauge, FileCheck2, Sparkles, Users,
-  LayoutDashboard, CheckCircle2, ArrowRight, Clock, FolderCheck, Star,
+  LayoutDashboard, CheckCircle2, ArrowRight, FolderCheck, Star,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -187,8 +187,10 @@ function Footer() {
           <span className="text-sm font-black text-slate-900">Certivia</span>
           <span className="text-xs text-slate-400">— Pilotage Qualiopi</span>
         </div>
-        <div className="flex items-center gap-5 text-xs text-slate-400">
-          <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Hébergé en Europe</span>
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+          <a href="/legal/mentions-legales" className="hover:text-slate-700 font-medium">Mentions légales</a>
+          <a href="/legal/confidentialite" className="hover:text-slate-700 font-medium">Confidentialité</a>
+          <a href="/legal/cgu" className="hover:text-slate-700 font-medium">CGU</a>
           <a href="/login" className="hover:text-slate-700 font-medium">Se connecter</a>
         </div>
       </div>
