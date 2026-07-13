@@ -6,13 +6,14 @@ export const COMPANY = {
   siteUrl: 'https://certivia.app',
 
   // Identité de l'éditeur (obligatoire dans les mentions légales)
-  legalName: 'Sokaina ED-DIM (nom commercial : Certivia)',
-  legalForm: 'Entrepreneur individuel (EI)',
-  siret: '977 463 900 00018',
-  rcs: '', // non applicable pour un EI
-  capital: '', // non applicable pour un EI
-  vat: '', // laisser vide si franchise en base de TVA
-  address: '10 Grande Rue des Fabres, 13800 Istres',
+  legalName: 'ENKEL SOLUTIONS',
+  legalForm: 'SAS (société par actions simplifiée)',
+  capital: '[À COMPLÉTER : capital social, ex. 1 000 €]',
+  siren: '107 255 366',
+  rcs: 'RCS Paris 107 255 366',
+  vat: '', // laisser vide tant que non communiqué
+  address: '8 bis rue Abel, 75012 Paris',
+  domiciliation: 'I DOM YOU PARIS', // société domiciliée chez ce prestataire
   publisher: 'Sokaina ED-DIM',
 
   // Contact (exercice des droits RGPD, support)
