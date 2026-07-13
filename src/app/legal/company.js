@@ -6,14 +6,14 @@ export const COMPANY = {
   siteUrl: 'https://certivia.app',
 
   // Identité de l'éditeur (obligatoire dans les mentions légales)
-  legalName: 'Certivia',
+  legalName: 'Sokaina ED-DIM (nom commercial : Certivia)',
   legalForm: 'Entrepreneur individuel (EI)',
   siret: '977 463 900 00018',
   rcs: '', // non applicable pour un EI
   capital: '', // non applicable pour un EI
   vat: '', // laisser vide si franchise en base de TVA
   address: '10 Grande Rue des Fabres, 13800 Istres',
-  publisher: '[À COMPLÉTER : ton nom et prénom (obligatoire pour un EI)]',
+  publisher: 'Sokaina ED-DIM',
 
   // Contact (exercice des droits RGPD, support)
   contactEmail: 'contact@certivia.app',
