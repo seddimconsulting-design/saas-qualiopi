@@ -6,17 +6,17 @@ export const COMPANY = {
   siteUrl: 'https://certivia.app',
 
   // Identité de l'éditeur (obligatoire dans les mentions légales)
-  legalName: '[À COMPLÉTER : raison sociale ou nom de l’exploitant]',
-  legalForm: '[À COMPLÉTER : forme juridique — micro-entreprise, SASU, SAS…]',
-  siret: '[À COMPLÉTER : n° SIRET]',
-  rcs: '[À COMPLÉTER : ville d’immatriculation RCS, le cas échéant]',
-  capital: '', // ex. "1 000 €" si société — laisser vide si non applicable
-  vat: '[À COMPLÉTER : n° TVA intracommunautaire, le cas échéant]',
-  address: '[À COMPLÉTER : adresse du siège / de l’exploitant]',
-  publisher: '[À COMPLÉTER : nom du directeur de la publication]',
+  legalName: 'Certivia',
+  legalForm: 'Entrepreneur individuel (EI)',
+  siret: '977 463 900 00018',
+  rcs: '', // non applicable pour un EI
+  capital: '', // non applicable pour un EI
+  vat: '', // laisser vide si franchise en base de TVA
+  address: '10 Grande Rue des Fabres, 13800 Istres',
+  publisher: '[À COMPLÉTER : ton nom et prénom (obligatoire pour un EI)]',
 
   // Contact (exercice des droits RGPD, support)
-  contactEmail: 'seddim.consulting@gmail.com',
+  contactEmail: 'contact@certivia.app',
 
   // Hébergeur (obligatoire dans les mentions légales)
   host: 'Vercel Inc.',

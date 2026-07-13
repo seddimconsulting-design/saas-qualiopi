@@ -16,8 +16,8 @@ export default function MentionsLegales() {
         <li>Forme juridique : {COMPANY.legalForm}</li>
         {COMPANY.capital ? <li>Capital social : {COMPANY.capital}</li> : null}
         <li>SIRET : {COMPANY.siret}</li>
-        <li>RCS : {COMPANY.rcs}</li>
-        <li>TVA intracommunautaire : {COMPANY.vat}</li>
+        {COMPANY.rcs ? <li>RCS : {COMPANY.rcs}</li> : null}
+        {COMPANY.vat ? <li>TVA intracommunautaire : {COMPANY.vat}</li> : null}
         <li>Siège / adresse : {COMPANY.address}</li>
         <li>Contact : <a className="text-emerald-600 font-medium" href={`mailto:${COMPANY.contactEmail}`}>{COMPANY.contactEmail}</a></li>
       </UL>
