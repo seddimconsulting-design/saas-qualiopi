@@ -242,6 +242,7 @@ export default function AppClient() {
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [me, setMe] = useState(null);
+  const [verifState, setVerifState] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -284,6 +285,13 @@ export default function AppClient() {
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
+  };
+  const resendVerification = async () => {
+    setVerifState('sending');
+    try {
+      const r = await fetch('/api/auth/resend-verification', { method: 'POST' });
+      setVerifState(r.ok ? 'sent' : 'error');
+    } catch { setVerifState('error'); }
   };
   const saveProfile = async () => {
     setOrgMsg('');
@@ -622,6 +630,22 @@ export default function AppClient() {
             </div>
           </div>
         </header>
+
+        {me && me.emailVerified === false && (
+          <div className="bg-amber-50 border-b border-amber-200 px-8 py-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-amber-800">
+            {verifState === 'sent' ? (
+              <span className="font-bold">E-mail de confirmation renvoyé — vérifiez votre boîte ({me.email}) et vos spams.</span>
+            ) : (
+              <>
+                <span>Confirmez votre adresse e-mail (<span className="font-bold">{me.email}</span>) pour sécuriser votre compte.</span>
+                <button onClick={resendVerification} disabled={verifState === 'sending'}
+                  className="font-bold underline hover:text-amber-900 disabled:opacity-50">
+                  {verifState === 'sending' ? 'Envoi…' : verifState === 'error' ? 'Réessayer' : 'Renvoyer l’e-mail'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 

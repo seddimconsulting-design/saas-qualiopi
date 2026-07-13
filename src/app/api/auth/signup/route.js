@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { q } from '@/lib/db';
 import { createToken, cookieOptions, COOKIE, genId } from '@/lib/auth';
+import { rateLimit, tooMany } from '@/lib/rate-limit';
+import { issueEmailVerification } from '@/lib/email-verify';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req) {
   try {
+    const rl = await rateLimit(req, { name: 'signup', max: 5, windowSec: 3600 });
+    if (!rl.ok) return tooMany(rl.retryAfter);
+
     const { email, password, ofName } = await req.json();
     const mail = (email || '').trim().toLowerCase();
     if (!mail || !password || password.length < 6) {
@@ -22,8 +27,11 @@ export async function POST(req) {
     const name = (ofName || 'Mon organisme').trim();
     await q('INSERT INTO app_tenants (id, name) VALUES ($1, $2)', [tenantId, name]);
     const hash = await bcrypt.hash(password, 10);
-    await q("INSERT INTO app_users (id, tenant_id, email, password_hash, name, role) VALUES ($1, $2, $3, $4, $5, 'owner')",
+    await q("INSERT INTO app_users (id, tenant_id, email, password_hash, name, role, email_verified) VALUES ($1, $2, $3, $4, $5, 'owner', FALSE)",
       [userId, tenantId, mail, hash, name]);
+
+    // E-mail de confirmation (ne bloque pas l'inscription si l'envoi échoue).
+    try { await issueEmailVerification(userId, mail, new URL(req.url).origin); } catch {}
 
     const token = await createToken({ userId, tenantId, email: mail, ofName: name });
     const res = NextResponse.json({ ok: true, user: { email: mail, ofName: name } });

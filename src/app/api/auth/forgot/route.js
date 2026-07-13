@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendResetEmail } from '@/lib/mail';
+import { rateLimit, tooMany } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req) {
   try {
+    const rl = await rateLimit(req, { name: 'forgot', max: 5, windowSec: 900 });
+    if (!rl.ok) return tooMany(rl.retryAfter);
+
     const { email } = await req.json();
     const mail = (email || '').trim().toLowerCase();
     const rows = await q('SELECT id FROM app_users WHERE email = $1', [mail]);

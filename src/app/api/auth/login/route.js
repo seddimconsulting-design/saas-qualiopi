@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { q } from '@/lib/db';
 import { createToken, cookieOptions, COOKIE } from '@/lib/auth';
+import { rateLimit, tooMany } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req) {
   try {
+    const rl = await rateLimit(req, { name: 'login', max: 10, windowSec: 300 });
+    if (!rl.ok) return tooMany(rl.retryAfter);
+
     const { email, password } = await req.json();
     const mail = (email || '').trim().toLowerCase();
     const rows = await q(

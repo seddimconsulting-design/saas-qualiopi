@@ -197,3 +197,23 @@ CREATE TABLE IF NOT EXISTS password_resets (
 UPDATE app_users u SET role = 'owner'
 WHERE role IS DISTINCT FROM 'owner'
   AND NOT EXISTS (SELECT 1 FROM app_users u2 WHERE u2.tenant_id = u.tenant_id AND u2.created_at < u.created_at);
+
+-- ─── Vérification d'e-mail à l'inscription ───
+-- DEFAULT TRUE : tous les comptes déjà existants (et ajoutés par un propriétaire)
+-- sont considérés vérifiés ; seules les nouvelles inscriptions passent FALSE
+-- explicitement (voir la route signup). Idempotent : ré-exécuter ne re-vérifie rien.
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;
+
+CREATE TABLE IF NOT EXISTS email_verifications (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ─── Limitation de débit (anti-abus) sur les routes sensibles ───
+CREATE TABLE IF NOT EXISTS rate_limits (
+    bucket TEXT PRIMARY KEY,
+    count INT NOT NULL DEFAULT 0,
+    reset_at TIMESTAMPTZ NOT NULL
+);

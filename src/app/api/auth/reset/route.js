@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { q } from '@/lib/db';
+import { rateLimit, tooMany } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(req) {
   try {
+    const rl = await rateLimit(req, { name: 'reset', max: 10, windowSec: 900 });
+    if (!rl.ok) return tooMany(rl.retryAfter);
+
     const { token, password } = await req.json();
     if (!token || !password || password.length < 6) {
       return NextResponse.json({ error: 'Mot de passe (6 caractères min.) requis.' }, { status: 400 });
