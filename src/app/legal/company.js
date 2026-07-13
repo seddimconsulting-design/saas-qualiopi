@@ -8,13 +8,13 @@ export const COMPANY = {
   // Identité de l'éditeur (obligatoire dans les mentions légales)
   legalName: 'ENKEL SOLUTIONS',
   legalForm: 'SAS (société par actions simplifiée)',
-  capital: '[À COMPLÉTER : capital social, ex. 1 000 €]',
+  capital: '100 €',
   siren: '107 255 366',
   rcs: 'RCS Paris 107 255 366',
   vat: '', // laisser vide tant que non communiqué
   address: '8 bis rue Abel, 75012 Paris',
   domiciliation: 'I DOM YOU PARIS', // société domiciliée chez ce prestataire
-  publisher: 'Sokaina ED-DIM',
+  publisher: 'Yassine ED-DIM (Président)',
 
   // Contact (exercice des droits RGPD, support)
   contactEmail: 'contact@certivia.app',
