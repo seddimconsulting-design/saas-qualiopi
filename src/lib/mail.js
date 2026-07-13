@@ -1,5 +1,5 @@
 /* Envoi d'e-mail via Resend (API HTTP). Sans RESEND_API_KEY : ne fait rien. */
-async function send({ to, subject, html }) {
+async function send({ to, subject, html, replyTo }) {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM || 'Certivia <onboarding@resend.dev>';
   if (!key) return { sent: false, reason: 'no-key' };
@@ -7,13 +7,28 @@ async function send({ to, subject, html }) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({ from, to, subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
     });
     if (!res.ok) return { sent: false, reason: await res.text() };
     return { sent: true };
   } catch (e) {
     return { sent: false, reason: e.message };
   }
+}
+
+const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+
+export function sendFeedbackEmail({ from, ofName, message }) {
+  const to = process.env.FEEDBACK_TO || 'contact@certivia.app';
+  return send({
+    to,
+    replyTo: from,
+    subject: `Feedback Certivia — ${ofName || from}`,
+    html: wrap(`
+      <p><strong>De :</strong> ${esc(from)}${ofName ? ` (${esc(ofName)})` : ''}</p>
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0" />
+      <p style="white-space:pre-wrap">${esc(message)}</p>`),
+  });
 }
 
 const wrap = (inner) => `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2a44">${inner}</div>`;

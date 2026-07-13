@@ -243,6 +243,8 @@ export default function AppClient() {
   const [dbError, setDbError] = useState(null);
   const [me, setMe] = useState(null);
   const [verifState, setVerifState] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
+  const [onbHidden, setOnbHidden] = useState(false);
+  const [feedback, setFeedback] = useState(null); // null (fermé) | { msg, state }
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -280,7 +282,20 @@ export default function AppClient() {
     fetch('/api/team').then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
     }).catch(() => {});
+    try { if (localStorage.getItem('certivia_onboarding_hidden') === '1') setOnbHidden(true); } catch {}
   }, []);
+
+  const hideOnboarding = () => {
+    setOnbHidden(true);
+    try { localStorage.setItem('certivia_onboarding_hidden', '1'); } catch {}
+  };
+  const sendFeedback = async () => {
+    setFeedback(f => ({ ...f, state: 'sending' }));
+    try {
+      const r = await fetch('/api/feedback', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ message: feedback.msg }) });
+      setFeedback(f => ({ ...f, state: r.ok ? 'sent' : 'error' }));
+    } catch { setFeedback(f => ({ ...f, state: 'error' })); }
+  };
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -661,6 +676,47 @@ export default function AppClient() {
           {/* ══════════════ DASHBOARD ══════════════ */}
           {tab === 'dashboard' && (
             <>
+              {/* Onboarding — se coche selon les données réelles, disparaît une fois complet */}
+              {(() => {
+                const steps = [
+                  { done: me?.emailVerified !== false, label: 'Confirmer votre adresse e-mail', action: me?.emailVerified === false ? resendVerification : null, cta: 'Renvoyer' },
+                  { done: !!(profile.name && profile.address), label: 'Compléter le profil de votre organisme (NDA, adresse, logo)', action: () => setTab('organisme'), cta: 'Compléter' },
+                  { done: sessions.length > 0, label: 'Créer votre première session de formation', action: () => setTab('sessions'), cta: 'Créer' },
+                  { done: trainees.length > 0, label: 'Ajouter votre premier stagiaire', action: () => setTab('trainees'), cta: 'Ajouter' },
+                ];
+                const doneCount = steps.filter(s => s.done).length;
+                if (onbHidden || doneCount === steps.length) return null;
+                return (
+                  <div className="bg-white rounded-2xl border border-emerald-200 p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-sm font-black text-slate-900">Bienvenue sur Certivia 👋</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Quelques étapes pour démarrer votre pilotage Qualiopi — {doneCount}/{steps.length} faites.</p>
+                      </div>
+                      <button onClick={hideOnboarding} className="text-slate-300 hover:text-slate-500 p-1" title="Masquer">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-4">
+                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+                    </div>
+                    <div className="space-y-1.5">
+                      {steps.map((s, k) => (
+                        <div key={k} className="flex items-center gap-3 py-1.5">
+                          <CheckCircle2 className={cls('w-4 h-4 shrink-0', s.done ? 'text-emerald-500' : 'text-slate-200')} />
+                          <span className={cls('flex-1 text-xs', s.done ? 'text-slate-400 line-through' : 'text-slate-700 font-medium')}>{s.label}</span>
+                          {!s.done && s.action && (
+                            <button onClick={s.action} className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
+                              {s.cta} <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="emerald" sub={`${indOk}/32 indicateurs`} trend={5} />
@@ -1574,6 +1630,39 @@ export default function AppClient() {
             </Field>
           </Row2>
         </Modal>
+      )}
+
+      {/* ══════════════ Aide & feedback ══════════════ */}
+      <button onClick={() => setFeedback({ msg: '', state: 'idle' })}
+        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-lg hover:bg-emerald-700 transition">
+        <MessageSquareWarning className="w-4 h-4" /> Aide &amp; feedback
+      </button>
+
+      {feedback && (
+        <div className="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4" onClick={() => setFeedback(null)}>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-extrabold text-slate-900">Aide &amp; feedback</h3>
+              <button onClick={() => setFeedback(null)} className="text-slate-300 hover:text-slate-500"><X className="w-4 h-4" /></button>
+            </div>
+            {feedback.state === 'sent' ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700">
+                Merci&nbsp;! Votre message a bien été transmis à l&apos;équipe Certivia. Nous vous répondrons par e-mail.
+              </div>
+            ) : (
+              <>
+                <p className="text-[11px] text-slate-500 mb-3">Une question, un bug, une idée&nbsp;? Écrivez-nous, on vous répond par e-mail.</p>
+                <textarea autoFocus rows={4} className={cls(inp, 'resize-none')} placeholder="Votre message…"
+                  value={feedback.msg} onChange={e => setFeedback(f => ({ ...f, msg: e.target.value }))} />
+                {feedback.state === 'error' && <p className="text-[11px] text-red-600 mt-2">L&apos;envoi a échoué. Réessayez ou écrivez à contact@certivia.app.</p>}
+                <button onClick={sendFeedback} disabled={!feedback.msg.trim() || feedback.state === 'sending'}
+                  className="mt-3 w-full py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
+                  {feedback.state === 'sending' ? 'Envoi…' : 'Envoyer'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
     </div>
