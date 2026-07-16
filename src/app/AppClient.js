@@ -1002,9 +1002,9 @@ export default function AppClient() {
                           <span className="font-mono text-emerald-800">{inviteMsg.link}</span>
                         </div>
                       )}
-                      <a href={docUrlFor('emargement', 'pdf', { sessionId: selectedSession.id })} target="_blank" rel="noopener noreferrer"
+                      <a href={`/api/emargement/${selectedSession.id}`} target="_blank" rel="noopener noreferrer"
                         className={cls(btn, 'w-full justify-center bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700')}>
-                        <Download className="w-3.5 h-3.5" /> Feuille d&apos;émargement (PDF)
+                        <Download className="w-3.5 h-3.5" /> Feuille d&apos;émargement signée (PDF)
                       </a>
                     </div>
 
