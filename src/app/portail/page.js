@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GraduationCap, CheckCircle2, PenLine } from 'lucide-react';
 
+const cls = (...a) => a.filter(Boolean).join(' ');
+
 function frDate(s) {
   if (!s) return '';
   const d = new Date(s);
@@ -57,7 +59,7 @@ export default function PortailPage() {
   const [data, setData] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [error, setError] = useState('');
-  const [signing, setSigning] = useState(null); // sessionId en cours de signature
+  const [signing, setSigning] = useState(null); // { sessionId, slot } en cours de signature
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async (tok) => {
@@ -75,12 +77,12 @@ export default function PortailPage() {
     setToken(tok); load(tok);
   }, [load]);
 
-  const submitSignature = async (sessionId, signature) => {
+  const submitSignature = async (sessionId, slot, signature) => {
     setSaving(true);
     try {
       const r = await fetch('/api/portal/sign', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, sessionId, signature }),
+        body: JSON.stringify({ token, sessionId, slot, signature }),
       });
       const d = await r.json();
       if (!r.ok) { alert(d.error || 'Erreur lors de l’enregistrement.'); setSaving(false); return; }
@@ -121,7 +123,9 @@ export default function PortailPage() {
             )}
 
             <div className="space-y-4">
-              {data.sessions.map((s) => (
+              {data.sessions.map((s) => {
+                const allSigned = s.total > 0 && s.signedCount >= s.total;
+                return (
                 <div key={s.id} className="bg-white rounded-2xl border border-slate-100 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -133,27 +137,38 @@ export default function PortailPage() {
                         {frDate(s.start_date)}{s.end_date && s.end_date !== s.start_date ? ` → ${frDate(s.end_date)}` : ''}
                       </p>
                     </div>
-                    {s.signed && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Signé
-                      </span>
-                    )}
+                    <span className={cls('inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shrink-0 border',
+                      allSigned ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-500 bg-slate-50 border-slate-200')}>
+                      {allSigned && <CheckCircle2 className="w-3.5 h-3.5" />} {s.signedCount}/{s.total} signée{s.total > 1 ? 's' : ''}
+                    </span>
                   </div>
 
-                  {s.signed ? (
-                    <p className="text-[11px] text-slate-400 mt-3">Présence signée le {frDate(s.signed_at)} — merci !</p>
-                  ) : signing === s.id ? (
-                    <div className="mt-4">
-                      <SignaturePad saving={saving} onCancel={() => setSigning(null)} onSave={(sig) => submitSignature(s.id, sig)} />
-                    </div>
-                  ) : (
-                    <button onClick={() => setSigning(s.id)}
-                      className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">
-                      <PenLine className="w-4 h-4" /> Signer ma présence
-                    </button>
-                  )}
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-4 mb-2">Émargement par demi-journée</p>
+                  <div className="space-y-2">
+                    {s.slots.map((sl) => (
+                      <div key={sl.key} className={cls('rounded-xl border p-3', sl.signed ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100')}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={cls('text-xs font-semibold', sl.signed ? 'text-emerald-700' : 'text-slate-700')}>{sl.label}</span>
+                          {sl.signed ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /> Signé</span>
+                          ) : !(signing && signing.sessionId === s.id && signing.slot === sl.key) ? (
+                            <button onClick={() => setSigning({ sessionId: s.id, slot: sl.key })}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700">
+                              <PenLine className="w-3.5 h-3.5" /> Signer
+                            </button>
+                          ) : null}
+                        </div>
+                        {signing && signing.sessionId === s.id && signing.slot === sl.key && (
+                          <div className="mt-3">
+                            <SignaturePad saving={saving} onCancel={() => setSigning(null)} onSave={(sig) => submitSignature(s.id, sl.key, sig)} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

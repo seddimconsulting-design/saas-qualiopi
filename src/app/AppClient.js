@@ -259,7 +259,7 @@ export default function AppClient() {
   const [onbHidden, setOnbHidden] = useState(false);
   const [feedback, setFeedback] = useState(null); // null (fermé) | { msg, state }
   const [docMenu, setDocMenu] = useState(null); // id du stagiaire dont le menu Documents est ouvert
-  const [roster, setRoster] = useState({ enrolled: [], all: [] });
+  const [roster, setRoster] = useState({ enrolled: [], all: [], total: 0 });
   const [addTraineeId, setAddTraineeId] = useState('');
   const [inviteMsg, setInviteMsg] = useState(null); // { traineeId, link, email, emailed } | null
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
@@ -976,22 +976,26 @@ export default function AppClient() {
                           className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50')}>Ajouter</button>
                       </div>
                       {roster.enrolled.length === 0 && <p className="text-[10px] text-slate-400">Aucun stagiaire inscrit à cette session.</p>}
-                      {roster.enrolled.map(en => (
+                      {roster.enrolled.map(en => {
+                        const complete = roster.total > 0 && en.signed_count >= roster.total;
+                        return (
                         <div key={en.id} className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-bold text-slate-800 truncate">{en.first} {en.last}</p>
-                            {en.signed
-                              ? <p className="text-[10px] text-emerald-600 font-semibold">Signé le {en.signed_at ? new Date(en.signed_at).toLocaleDateString('fr-FR') : ''}</p>
-                              : <p className="text-[10px] text-slate-400">En attente de signature{en.has_access ? ' (lien envoyé)' : ''}</p>}
+                            <p className={cls('text-[10px] font-semibold', complete ? 'text-emerald-600' : en.signed_count > 0 ? 'text-amber-600' : 'text-slate-400')}>
+                              {en.signed_count}/{roster.total} demi-journée{roster.total > 1 ? 's' : ''} signée{en.signed_count > 1 ? 's' : ''}
+                              {!complete && en.has_access ? ' · lien envoyé' : ''}
+                            </p>
                           </div>
-                          {en.signed
+                          {complete
                             ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                             : <button onClick={() => inviteTrainee(en.id)} className="text-[10px] font-bold text-emerald-600 hover:underline shrink-0">
                                 {en.has_access ? 'Renvoyer' : 'Envoyer'} le lien
                               </button>}
                           <button onClick={() => unenrollTrainee(en.id)} className="p-1 text-red-300 hover:text-red-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
-                      ))}
+                        );
+                      })}
                       {inviteMsg && inviteMsg.link && (
                         <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700 break-all">
                           {inviteMsg.emailed ? `Lien envoyé par e-mail à ${inviteMsg.email}. ` : 'Aucun e-mail pour ce stagiaire — copiez le lien : '}

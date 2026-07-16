@@ -237,15 +237,26 @@ CREATE TABLE IF NOT EXISTS trainee_tokens (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Émargement signé (une signature par couple session/stagiaire).
+-- Émargement signé (une signature par demi-journée : session + stagiaire + créneau).
 CREATE TABLE IF NOT EXISTS attendances (
     id         TEXT PRIMARY KEY,
     tenant_id  TEXT NOT NULL,
     session_id TEXT NOT NULL,
     trainee_id TEXT NOT NULL,
+    slot       TEXT NOT NULL DEFAULT 'legacy',  -- créneau demi-journée, ex. 2026-06-02#AM
     signed_at  TIMESTAMPTZ DEFAULT now(),
     signature  TEXT,             -- image de la signature (data URL base64)
     signer_ip  TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE (session_id, trainee_id)
+    UNIQUE (session_id, trainee_id, slot)
 );
+-- Migration des installations existantes (émargement par demi-journée)
+ALTER TABLE attendances ADD COLUMN IF NOT EXISTS slot TEXT;
+UPDATE attendances SET slot = 'legacy' WHERE slot IS NULL;
+ALTER TABLE attendances ALTER COLUMN slot SET DEFAULT 'legacy';
+ALTER TABLE attendances DROP CONSTRAINT IF EXISTS attendances_session_id_trainee_id_key;
+DO $mig$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'attendances_session_trainee_slot_key') THEN
+    ALTER TABLE attendances ADD CONSTRAINT attendances_session_trainee_slot_key UNIQUE (session_id, trainee_id, slot);
+  END IF;
+END $mig$;
