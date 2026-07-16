@@ -237,6 +237,21 @@ CREATE TABLE IF NOT EXISTS trainee_tokens (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Réponses de satisfaction déposées par le stagiaire (à chaud / à froid).
+CREATE TABLE IF NOT EXISTS satisfaction_responses (
+    id           TEXT PRIMARY KEY,
+    tenant_id    TEXT NOT NULL,
+    session_id   TEXT NOT NULL,
+    trainee_id   TEXT NOT NULL,
+    kind         TEXT NOT NULL,            -- 'chaud' | 'froid'
+    ratings      JSONB,                    -- { questionId: note 1-5 }
+    comment      TEXT,
+    overall      NUMERIC(3,2),             -- moyenne des notes (1-5)
+    submitted_at TIMESTAMPTZ DEFAULT now(),
+    signer_ip    TEXT,
+    UNIQUE (session_id, trainee_id, kind)
+);
+
 -- Émargement signé (une signature par demi-journée : session + stagiaire + créneau).
 CREATE TABLE IF NOT EXISTS attendances (
     id         TEXT PRIMARY KEY,

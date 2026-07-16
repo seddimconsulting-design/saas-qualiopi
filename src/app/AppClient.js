@@ -262,6 +262,7 @@ export default function AppClient() {
   const [roster, setRoster] = useState({ enrolled: [], all: [], total: 0 });
   const [addTraineeId, setAddTraineeId] = useState('');
   const [inviteMsg, setInviteMsg] = useState(null); // { traineeId, link, email, emailed } | null
+  const [satResponses, setSatResponses] = useState([]);
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -299,6 +300,7 @@ export default function AppClient() {
     fetch('/api/team').then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
     }).catch(() => {});
+    fetch('/api/satisfaction').then(r => r.ok ? r.json() : null).then(d => { if (d) setSatResponses(d.responses || []); }).catch(() => {});
     try { if (localStorage.getItem('certivia_onboarding_hidden') === '1') setOnbHidden(true); } catch {}
   }, []);
 
@@ -1116,6 +1118,30 @@ export default function AppClient() {
                   ))}
                 </div>
               </div>
+
+              {satResponses.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100">
+                    <h3 className="text-xs font-extrabold text-slate-900">Commentaires des stagiaires</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Verbatims déposés via l&apos;espace stagiaire</p>
+                  </div>
+                  <div className="divide-y divide-slate-50">
+                    {satResponses.map((r, i) => (
+                      <div key={i} className="px-6 py-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-slate-900">{r.first} {r.last}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">{r.kind === 'froid' ? 'À froid' : 'À chaud'}</span>
+                          <span className="text-[10px] text-slate-400 truncate">{r.session_title}</span>
+                          <div className="flex gap-0.5 ml-auto shrink-0">
+                            {[1,2,3,4,5].map(n => <Star key={n} className={cls('w-3 h-3', Math.round(r.overall) >= n ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200')} />)}
+                          </div>
+                        </div>
+                        {r.comment && <p className="text-xs text-slate-600 mt-1.5 italic">« {r.comment} »</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

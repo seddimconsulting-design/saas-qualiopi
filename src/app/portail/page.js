@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GraduationCap, CheckCircle2, PenLine } from 'lucide-react';
+import { GraduationCap, CheckCircle2, PenLine, Star, MessageSquare } from 'lucide-react';
+import { SURVEYS } from '@/lib/survey';
 
 const cls = (...a) => a.filter(Boolean).join(' ');
 
@@ -64,6 +65,41 @@ function SignaturePad({ onSave, onCancel, saving }) {
   );
 }
 
+/* Questionnaire de satisfaction (notes 1-5 + commentaire). */
+function SurveyForm({ kind, saving, onCancel, onSubmit }) {
+  const survey = SURVEYS[kind];
+  const [ratings, setRatings] = useState({});
+  const [comment, setComment] = useState('');
+  const complete = survey.questions.every((q) => ratings[q.id]);
+
+  return (
+    <div className="mt-3 space-y-3">
+      {survey.questions.map((q) => (
+        <div key={q.id} className="flex items-center justify-between gap-3">
+          <span className="text-[11px] text-slate-600 flex-1">{q.label}</span>
+          <div className="flex gap-0.5 shrink-0">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button" onClick={() => setRatings((r) => ({ ...r, [q.id]: n }))}>
+                <Star className={cls('w-5 h-5', (ratings[q.id] || 0) >= n ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200')} />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)}
+        placeholder="Un commentaire (facultatif)…"
+        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 resize-none" />
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">Annuler</button>
+        <button onClick={() => onSubmit(ratings, comment)} disabled={!complete || saving}
+          className="flex-[2] py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
+          {saving ? 'Envoi…' : 'Envoyer mon évaluation'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PortailPage() {
   const [token, setToken] = useState('');
   const [data, setData] = useState(null);
@@ -71,6 +107,8 @@ export default function PortailPage() {
   const [error, setError] = useState('');
   const [signing, setSigning] = useState(null); // { sessionId, slot } en cours de signature
   const [saving, setSaving] = useState(false);
+  const [survey, setSurvey] = useState(null); // { sessionId, kind } en cours
+  const [savingSurvey, setSavingSurvey] = useState(false);
 
   const load = useCallback(async (tok) => {
     try {
@@ -99,6 +137,20 @@ export default function PortailPage() {
       setSigning(null); setSaving(false);
       load(token);
     } catch (e) { alert(e.message); setSaving(false); }
+  };
+
+  const submitSurvey = async (sessionId, kind, ratings, comment) => {
+    setSavingSurvey(true);
+    try {
+      const r = await fetch('/api/portal/survey', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, sessionId, kind, ratings, comment }),
+      });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || 'Erreur lors de l’enregistrement.'); setSavingSurvey(false); return; }
+      setSurvey(null); setSavingSurvey(false);
+      load(token);
+    } catch (e) { alert(e.message); setSavingSurvey(false); }
   };
 
   return (
@@ -175,6 +227,36 @@ export default function PortailPage() {
                         )}
                       </div>
                     ))}
+                  </div>
+
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-5 mb-2">Votre satisfaction</p>
+                  <div className="space-y-2">
+                    {['chaud', 'froid'].map((kind) => {
+                      const done = s.surveys && s.surveys[kind];
+                      const open = survey && survey.sessionId === s.id && survey.kind === kind;
+                      return (
+                        <div key={kind} className={cls('rounded-xl border p-3', done ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100')}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <MessageSquare className={cls('w-4 h-4 shrink-0', done ? 'text-emerald-500' : 'text-slate-400')} />
+                              <div className="min-w-0">
+                                <p className={cls('text-xs font-semibold', done ? 'text-emerald-700' : 'text-slate-700')}>{SURVEYS[kind].title}</p>
+                                <p className="text-[10px] text-slate-400">{SURVEYS[kind].subtitle}</p>
+                              </div>
+                            </div>
+                            {done ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 shrink-0"><CheckCircle2 className="w-3.5 h-3.5" /> Répondu</span>
+                            ) : !open ? (
+                              <button onClick={() => setSurvey({ sessionId: s.id, kind })}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700 shrink-0">Répondre</button>
+                            ) : null}
+                          </div>
+                          {open && (
+                            <SurveyForm kind={kind} saving={savingSurvey} onCancel={() => setSurvey(null)} onSubmit={(r, c) => submitSurvey(s.id, kind, r, c)} />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 );

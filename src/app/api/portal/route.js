@@ -27,13 +27,21 @@ export async function GET(req) {
   const signedMap = {};
   for (const a of att) signedMap[`${a.session_id}|${a.slot}`] = a.signed_at;
 
+  // Questionnaires de satisfaction déjà déposés.
+  const sat = await q('SELECT session_id, kind FROM satisfaction_responses WHERE trainee_id = $1', [auth.traineeId]);
+  const satMap = {};
+  for (const r of sat) satMap[`${r.session_id}|${r.kind}`] = true;
+
   const sessions = rows.map((s) => {
     const slots = sessionSlots(s).map((sl) => ({
       key: sl.key, label: sl.label,
       signed: signedMap[`${s.id}|${sl.key}`] != null,
       signed_at: signedMap[`${s.id}|${sl.key}`] || null,
     }));
-    return { ...s, slots, signedCount: slots.filter((x) => x.signed).length, total: slots.length };
+    return {
+      ...s, slots, signedCount: slots.filter((x) => x.signed).length, total: slots.length,
+      surveys: { chaud: !!satMap[`${s.id}|chaud`], froid: !!satMap[`${s.id}|froid`] },
+    };
   });
 
   return NextResponse.json({
