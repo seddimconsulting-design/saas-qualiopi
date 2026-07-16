@@ -1,9 +1,11 @@
 import PDFDocument from 'pdfkit';
 
-function parseImg(dataUrl) {
-  const m = /^data:image\/(png|jpe?g);base64,(.+)$/i.exec(dataUrl || '');
+/* On n'incruste que du JPEG (opaque, fiable pour pdfkit) : une image corrompue
+   ou en PNG à canal alpha peut bloquer la finalisation du PDF. */
+function parseJpeg(dataUrl) {
+  const m = /^data:image\/jpe?g;base64,(.+)$/i.exec(dataUrl || '');
   if (!m) return null;
-  try { return Buffer.from(m[2], 'base64'); } catch { return null; }
+  try { return Buffer.from(m[1], 'base64'); } catch { return null; }
 }
 
 function frDateTime(d) {
@@ -28,12 +30,10 @@ export function renderEmargementPdf({ of, session, slots, trainees }) {
     const nameW = sigX - nameX - 8, sigW = timeX - sigX - 8, timeW = right - timeX;
 
     // ── En-tête organisme ──
-    const logo = parseImg(of.logo);
-    if (logo) { try { doc.image(logo, left, 40, { fit: [120, 42] }); } catch { /* ignore */ } }
-    doc.font('Helvetica-Bold').fontSize(13).fillColor('#1F2A44').text(of.name || '', left + (logo ? 132 : 0), 44);
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#1F2A44').text(of.name || '', left, 44);
     doc.font('Helvetica').fontSize(8.5).fillColor('#777777');
     const meta = [of.nda ? `Déclaration d'activité n° ${of.nda}` : '', of.address, [of.email, of.phone].filter(Boolean).join(' · ')].filter(Boolean);
-    meta.forEach((m) => doc.text(m, left + (logo ? 132 : 0)));
+    meta.forEach((m) => doc.text(m, left));
 
     doc.moveTo(left, 96).lineTo(right, 96).strokeColor('#E2E8F0').stroke();
 
@@ -74,9 +74,12 @@ export function renderEmargementPdf({ of, session, slots, trainees }) {
         doc.font('Helvetica').fontSize(9.5).fillColor('#1F2937')
           .text(`${t.first || ''} ${t.last || ''}`.trim(), nameX, y + 14, { width: nameW });
 
-        if (sig && sig.signature) {
-          const img = parseImg(sig.signature);
-          if (img) { try { doc.image(img, sigX, y + 4, { fit: [sigW, rowHeight - 12] }); } catch { /* ignore */ } }
+        const jpg = sig && sig.signature ? parseJpeg(sig.signature) : null;
+        if (jpg) {
+          try { doc.image(jpg, sigX, y + 4, { fit: [sigW, rowHeight - 12] }); } catch { /* ignore */ }
+          doc.font('Helvetica').fontSize(8).fillColor('#64748B').text(frDateTime(sig.signed_at), timeX, y + 16, { width: timeW });
+        } else if (sig) {
+          doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#059669').text('Signé', sigX, y + 16, { width: sigW });
           doc.font('Helvetica').fontSize(8).fillColor('#64748B').text(frDateTime(sig.signed_at), timeX, y + 16, { width: timeW });
         } else if (t.isTrainer) {
           doc.font('Helvetica-Oblique').fontSize(8).fillColor('#CBD5E1').text('(signature manuscrite)', sigX, y + 16, { width: sigW });

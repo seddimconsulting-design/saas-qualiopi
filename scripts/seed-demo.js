@@ -106,8 +106,8 @@ INSERT INTO session_trainees (tenant_id, session_id, trainee_id) VALUES
  ('${T}', 'dc-s3', 'dc-t5')
 ON CONFLICT (session_id, trainee_id) DO NOTHING;
 
--- Nettoie d'éventuelles anciennes signatures "pleine session" (avant l'émargement par demi-journée)
-DELETE FROM attendances WHERE tenant_id = '${T}' AND slot = 'legacy';
+-- Repart d'un émargement démo propre (les tests utilisaient des images factices)
+DELETE FROM attendances WHERE tenant_id = '${T}';
 `;
 
   try {

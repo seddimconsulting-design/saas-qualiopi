@@ -41,7 +41,10 @@ export async function GET(req, { params }) {
   const trainees = enrolled.map((t) => ({ first: t.first, last: t.last, sigs: byTrainee[t.id] || {} }));
 
   try {
-    const buf = await renderEmargementPdf({ of, session: s, slots: sessionSlots(s), trainees });
+    const buf = await Promise.race([
+      renderEmargementPdf({ of, session: s, slots: sessionSlots(s), trainees }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Génération trop longue')), 9000)),
+    ]);
     return new NextResponse(buf, {
       headers: {
         'Content-Type': 'application/pdf',

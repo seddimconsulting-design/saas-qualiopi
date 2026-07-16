@@ -34,7 +34,17 @@ function SignaturePad({ onSave, onCancel, saving }) {
   const end = () => { drawing.current = false; };
 
   const clear = () => { const c = canvasRef.current; c.getContext('2d').clearRect(0, 0, c.width, c.height); setEmpty(true); };
-  const save = () => { if (empty) return; onSave(canvasRef.current.toDataURL('image/png')); };
+  const save = () => {
+    if (empty) return;
+    // Export en JPEG sur fond blanc (opaque) : fiable pour l'incrustation PDF.
+    const src = canvasRef.current;
+    const flat = document.createElement('canvas');
+    flat.width = src.width; flat.height = src.height;
+    const fx = flat.getContext('2d');
+    fx.fillStyle = '#ffffff'; fx.fillRect(0, 0, flat.width, flat.height);
+    fx.drawImage(src, 0, 0);
+    onSave(flat.toDataURL('image/jpeg', 0.92));
+  };
 
   return (
     <div className="space-y-3">
