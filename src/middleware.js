@@ -15,8 +15,9 @@ export async function middleware(req) {
   const token = req.cookies.get('session')?.value;
   const authed = await isAuthed(token);
 
-  // Routes d'auth + page de réinitialisation : toujours ouvertes
+  // Routes d'auth + page de réinitialisation + portail stagiaire : toujours ouvertes
   if (pathname.startsWith('/api/auth')) return NextResponse.next();
+  if (pathname.startsWith('/api/portal')) return NextResponse.next();
   if (pathname === '/reset') return NextResponse.next();
 
   // Autres API : authentification requise

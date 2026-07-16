@@ -217,3 +217,35 @@ CREATE TABLE IF NOT EXISTS rate_limits (
     count INT NOT NULL DEFAULT 0,
     reset_at TIMESTAMPTZ NOT NULL
 );
+
+-- ─── Espace stagiaire : inscriptions, accès par lien, émargement signé ───
+-- Inscription d'un stagiaire à une session (relation N-N).
+CREATE TABLE IF NOT EXISTS session_trainees (
+    tenant_id  TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    trainee_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (session_id, trainee_id)
+);
+
+-- Jeton d'accès stagiaire (lien magique, un actif par stagiaire).
+CREATE TABLE IF NOT EXISTS trainee_tokens (
+    token_hash TEXT PRIMARY KEY,
+    trainee_id TEXT NOT NULL,
+    tenant_id  TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Émargement signé (une signature par couple session/stagiaire).
+CREATE TABLE IF NOT EXISTS attendances (
+    id         TEXT PRIMARY KEY,
+    tenant_id  TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    trainee_id TEXT NOT NULL,
+    signed_at  TIMESTAMPTZ DEFAULT now(),
+    signature  TEXT,             -- image de la signature (data URL base64)
+    signer_ip  TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE (session_id, trainee_id)
+);

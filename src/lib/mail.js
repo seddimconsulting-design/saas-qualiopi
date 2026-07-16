@@ -18,6 +18,18 @@ async function send({ to, subject, html, replyTo }) {
 
 const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
+export function sendTraineeAccessEmail(to, traineeName, ofName, link) {
+  return send({
+    to,
+    subject: `Votre espace formation${ofName ? ` — ${ofName}` : ''}`,
+    html: wrap(`
+      <p>Bonjour ${esc(traineeName || '')},</p>
+      <p>${esc(ofName || 'Votre organisme de formation')} met à votre disposition un espace personnel pour signer votre présence (émargement) et suivre votre formation.</p>
+      <p><a href="${link}" style="color:#059669;font-weight:bold">Accéder à mon espace</a></p>
+      <p style="color:#777;font-size:12px">Ce lien vous est personnel, ne le partagez pas.</p>`),
+  });
+}
+
 export function sendFeedbackEmail({ from, ofName, message }) {
   const to = process.env.FEEDBACK_TO || 'contact@certivia.app';
   return send({

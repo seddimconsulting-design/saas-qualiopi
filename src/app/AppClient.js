@@ -259,6 +259,9 @@ export default function AppClient() {
   const [onbHidden, setOnbHidden] = useState(false);
   const [feedback, setFeedback] = useState(null); // null (fermé) | { msg, state }
   const [docMenu, setDocMenu] = useState(null); // id du stagiaire dont le menu Documents est ouvert
+  const [roster, setRoster] = useState({ enrolled: [], all: [] });
+  const [addTraineeId, setAddTraineeId] = useState('');
+  const [inviteMsg, setInviteMsg] = useState(null); // { traineeId, link, email, emailed } | null
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -495,6 +498,32 @@ export default function AppClient() {
     const qs = [sessionId && `sessionId=${sessionId}`, traineeId && `traineeId=${traineeId}`].filter(Boolean).join('&');
     return `/api/document/${id}?format=${fmt}${qs ? '&' + qs : ''}`;
   };
+
+  /* Émargement / espace stagiaire (côté organisme) */
+  const loadRoster = async (sid) => {
+    if (!sid) { setRoster({ enrolled: [], all: [] }); return; }
+    const d = await fetch(`/api/roster?sessionId=${sid}`).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (d) setRoster(d);
+  };
+  const enrollTrainee = async (tid) => {
+    if (!tid) return;
+    await fetch('/api/roster', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ sessionId: selectedSessionId, traineeId: tid }) });
+    setAddTraineeId(''); loadRoster(selectedSessionId);
+  };
+  const unenrollTrainee = async (tid) => {
+    await fetch(`/api/roster?sessionId=${selectedSessionId}&traineeId=${tid}`, { method: 'DELETE' });
+    loadRoster(selectedSessionId);
+  };
+  const inviteTrainee = async (tid) => {
+    setInviteMsg({ traineeId: tid, loading: true });
+    try {
+      const r = await fetch('/api/roster/invite', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ traineeId: tid }) }).then(x => x.json());
+      setInviteMsg({ traineeId: tid, link: r.link, email: r.email, emailed: r.emailed });
+      loadRoster(selectedSessionId);
+    } catch (e) { setInviteMsg({ traineeId: tid, error: e.message }); }
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setInviteMsg(null); loadRoster(selectedSessionId); }, [selectedSessionId]);
   const analyzeDoc = async () => {
     if (!aiForm.text.trim()) return;
     setAiLoading(true); setAiResult(null);
@@ -931,6 +960,50 @@ export default function AppClient() {
                       ))}
                       <p className="text-[10px] text-slate-400 pt-1 leading-snug">Pastille = marquer comme fait. PDF / Word = générer le document pré-rempli avec les infos de la session (le Word est modifiable).</p>
                     </div>
+
+                    {/* Émargement / espace stagiaire */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Émargement des stagiaires</p>
+                      <div className="flex gap-2">
+                        <select value={addTraineeId} onChange={e => setAddTraineeId(e.target.value)}
+                          className="flex-1 min-w-0 px-2.5 py-2 text-xs rounded-lg border border-slate-200 bg-white text-slate-700">
+                          <option value="">+ Inscrire un stagiaire…</option>
+                          {roster.all.filter(a => !roster.enrolled.some(en => en.id === a.id)).map(a => (
+                            <option key={a.id} value={a.id}>{a.first} {a.last}</option>
+                          ))}
+                        </select>
+                        <button onClick={() => enrollTrainee(addTraineeId)} disabled={!addTraineeId}
+                          className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50')}>Ajouter</button>
+                      </div>
+                      {roster.enrolled.length === 0 && <p className="text-[10px] text-slate-400">Aucun stagiaire inscrit à cette session.</p>}
+                      {roster.enrolled.map(en => (
+                        <div key={en.id} className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold text-slate-800 truncate">{en.first} {en.last}</p>
+                            {en.signed
+                              ? <p className="text-[10px] text-emerald-600 font-semibold">Signé le {en.signed_at ? new Date(en.signed_at).toLocaleDateString('fr-FR') : ''}</p>
+                              : <p className="text-[10px] text-slate-400">En attente de signature{en.has_access ? ' (lien envoyé)' : ''}</p>}
+                          </div>
+                          {en.signed
+                            ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            : <button onClick={() => inviteTrainee(en.id)} className="text-[10px] font-bold text-emerald-600 hover:underline shrink-0">
+                                {en.has_access ? 'Renvoyer' : 'Envoyer'} le lien
+                              </button>}
+                          <button onClick={() => unenrollTrainee(en.id)} className="p-1 text-red-300 hover:text-red-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ))}
+                      {inviteMsg && inviteMsg.link && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700 break-all">
+                          {inviteMsg.emailed ? `Lien envoyé par e-mail à ${inviteMsg.email}. ` : 'Aucun e-mail pour ce stagiaire — copiez le lien : '}
+                          <span className="font-mono text-emerald-800">{inviteMsg.link}</span>
+                        </div>
+                      )}
+                      <a href={docUrlFor('emargement', 'pdf', { sessionId: selectedSession.id })} target="_blank" rel="noopener noreferrer"
+                        className={cls(btn, 'w-full justify-center bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700')}>
+                        <Download className="w-3.5 h-3.5" /> Feuille d&apos;émargement (PDF)
+                      </a>
+                    </div>
+
                     <button onClick={exportDossier} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>
                       <Download className="w-3.5 h-3.5" /> Exporter le dossier
                     </button>

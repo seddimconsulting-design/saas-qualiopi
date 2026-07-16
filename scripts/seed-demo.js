@@ -98,6 +98,13 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO indicator_status (tenant_id, indicator_id, status) VALUES
  ${indicatorRows}
 ON CONFLICT (tenant_id, indicator_id) DO NOTHING;
+
+-- Inscriptions stagiaires ↔ sessions (pour l'émargement / espace stagiaire)
+INSERT INTO session_trainees (tenant_id, session_id, trainee_id) VALUES
+ ('${T}', 'dc-s1', 'dc-t1'), ('${T}', 'dc-s1', 'dc-t2'), ('${T}', 'dc-s1', 'dc-t3'),
+ ('${T}', 'dc-s2', 'dc-t2'), ('${T}', 'dc-s2', 'dc-t4'),
+ ('${T}', 'dc-s3', 'dc-t5')
+ON CONFLICT (session_id, trainee_id) DO NOTHING;
 `;
 
   try {
