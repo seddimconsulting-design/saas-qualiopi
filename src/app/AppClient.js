@@ -63,6 +63,19 @@ const DOC_LABELS = {
   attendance:  '3. Émargement d\'assiduité',
   certificate: '4. Certificat de réalisation',
 };
+// Modèle à générer pour chaque document de conformité d'une session.
+const SESSION_DOC_TPL = {
+  convention:  'convention',
+  positioning: 'positionnement',
+  attendance:  'emargement',
+  certificate: 'attestation-fin',
+};
+// Documents générables au niveau d'un stagiaire (pré-remplis avec son nom).
+const TRAINEE_DOCS = [
+  { id: 'positionnement',  label: 'Fiche de positionnement' },
+  { id: 'fiche-suivi',     label: 'Fiche de suivi individualisé' },
+  { id: 'attestation-fin', label: 'Certificat de réalisation' },
+];
 
 /* ─── KPI card ─── */
 function KpiCard({ label, value, sub, icon: Icon, color = 'emerald', trend }) {
@@ -245,6 +258,7 @@ export default function AppClient() {
   const [verifState, setVerifState] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
   const [onbHidden, setOnbHidden] = useState(false);
   const [feedback, setFeedback] = useState(null); // null (fermé) | { msg, state }
+  const [docMenu, setDocMenu] = useState(null); // id du stagiaire dont le menu Documents est ouvert
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -474,6 +488,11 @@ export default function AppClient() {
   const indLabel = (id) => INDICATEURS.find(i => i.id === id)?.label || '';
   const docUrl = (id, fmt) => {
     const qs = [docSession && `sessionId=${docSession}`, docTrainee && `traineeId=${docTrainee}`].filter(Boolean).join('&');
+    return `/api/document/${id}?format=${fmt}${qs ? '&' + qs : ''}`;
+  };
+  /* Lien de génération d'un document pré-rempli pour un contexte précis. */
+  const docUrlFor = (id, fmt, { sessionId, traineeId } = {}) => {
+    const qs = [sessionId && `sessionId=${sessionId}`, traineeId && `traineeId=${traineeId}`].filter(Boolean).join('&');
     return `/api/document/${id}?format=${fmt}${qs ? '&' + qs : ''}`;
   };
   const analyzeDoc = async () => {
@@ -896,15 +915,21 @@ export default function AppClient() {
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Documents de conformité</p>
                       {Object.entries(selectedSession.docs).map(([k, v]) => (
-                        <button key={k} onClick={() => toggleDoc(k)}
-                          className={cls('w-full flex items-center gap-2.5 p-3 rounded-xl border text-left transition',
-                            v ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100 hover:border-emerald-200 hover:bg-emerald-50')}>
-                          {v ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                             : <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
-                          <span className={cls('text-xs font-semibold flex-1', v ? 'text-emerald-700' : 'text-slate-600')}>{DOC_LABELS[k]}</span>
-                          {v && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">OK</span>}
-                        </button>
+                        <div key={k}
+                          className={cls('flex items-center gap-2 p-2.5 rounded-xl border',
+                            v ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100')}>
+                          <button onClick={() => toggleDoc(k)} title={v ? 'Fait — cliquer pour annuler' : 'Marquer comme fait'} className="shrink-0">
+                            {v ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                               : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />}
+                          </button>
+                          <span className={cls('text-[11px] font-semibold flex-1 min-w-0', v ? 'text-emerald-700' : 'text-slate-600')}>{DOC_LABELS[k]}</span>
+                          <a href={docUrlFor(SESSION_DOC_TPL[k], 'pdf', { sessionId: selectedSession.id })} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700">PDF</a>
+                          <a href={docUrlFor(SESSION_DOC_TPL[k], 'docx', { sessionId: selectedSession.id })} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Word</a>
+                        </div>
                       ))}
+                      <p className="text-[10px] text-slate-400 pt-1 leading-snug">Pastille = marquer comme fait. PDF / Word = générer le document pré-rempli avec les infos de la session (le Word est modifiable).</p>
                     </div>
                     <button onClick={exportDossier} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>
                       <Download className="w-3.5 h-3.5" /> Exporter le dossier
@@ -926,29 +951,48 @@ export default function AppClient() {
               </div>
               <div className="divide-y divide-slate-50">
                 {trainees.map(t => (
-                  <div key={t.id} className="px-6 py-4 flex items-center gap-4 group">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-black text-emerald-700 shrink-0">{t.first[0]}{t.last[0]}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-xs text-slate-900">{t.first} {t.last}</p>
-                      <p className="text-[10px] text-slate-400">{t.email} · {t.phone}</p>
-                      {t.disability && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 mt-0.5">
-                          <AlertTriangle className="w-2.5 h-2.5" /> {t.disability}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={cls('text-[10px] font-bold px-2.5 py-1 rounded-xl border', t.score !== 'Non fait' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-100')}>
-                        Positionnement : {t.score}
-                      </span>
-                      <div className="flex gap-0.5">
-                        {[1,2,3,4,5].map(n => <Star key={n} className={cls('w-3 h-3', (t.satHot||0) >= n ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200')} />)}
+                  <div key={t.id}>
+                    <div className="px-6 py-4 flex items-center gap-4 group">
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-black text-emerald-700 shrink-0">{t.first[0]}{t.last[0]}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-slate-900">{t.first} {t.last}</p>
+                        <p className="text-[10px] text-slate-400">{t.email} · {t.phone}</p>
+                        {t.disability && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 mt-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> {t.disability}
+                          </span>
+                        )}
                       </div>
-                      <button onClick={() => delItem('trainees', t.id, setTrainees)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={cls('text-[10px] font-bold px-2.5 py-1 rounded-xl border', t.score !== 'Non fait' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-100')}>
+                          Positionnement : {t.score}
+                        </span>
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(n => <Star key={n} className={cls('w-3 h-3', (t.satHot||0) >= n ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200')} />)}
+                        </div>
+                        <button onClick={() => setDocMenu(docMenu === t.id ? null : t.id)}
+                          className={cls('flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition', docMenu === t.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>
+                          <FileText className="w-3.5 h-3.5" /> Documents
+                        </button>
+                        <button onClick={() => delItem('trainees', t.id, setTrainees)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-red-400 transition">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
+                    {docMenu === t.id && (
+                      <div className="px-6 pb-4 -mt-1 flex flex-wrap gap-2">
+                        {TRAINEE_DOCS.map(d => (
+                          <div key={d.id} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                            <span className="text-[11px] font-semibold text-slate-600">{d.label}</span>
+                            <a href={docUrlFor(d.id, 'pdf', { traineeId: t.id })} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700">PDF</a>
+                            <a href={docUrlFor(d.id, 'docx', { traineeId: t.id })} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Word</a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
