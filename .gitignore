@@ -28,6 +28,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# sauvegardes de données (contiennent des données personnelles + hachages)
+/backups
+
 # vercel
 .vercel
 
