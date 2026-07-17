@@ -1056,7 +1056,7 @@ export default function AppClient() {
                             <div key={i} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-[11px] font-bold text-slate-800 truncate">{p.first} {p.last}</p>
-                                {p.score != null && <span className="text-[10px] font-bold text-emerald-700 shrink-0">{p.score}%</span>}
+                                {p.score != null && <span className="text-[10px] font-bold text-emerald-700 shrink-0">{Math.round(p.score)}%</span>}
                               </div>
                               <p className="text-[10px] text-slate-500">Niveau déclaré : {(p.answers && p.answers.level) || '—'}</p>
                               {p.answers && p.answers.objectives && <p className="text-[10px] text-slate-500 mt-0.5 italic">« {p.answers.objectives} »</p>}
