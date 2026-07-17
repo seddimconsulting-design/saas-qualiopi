@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GraduationCap, CheckCircle2, PenLine, Star, MessageSquare } from 'lucide-react';
+import { GraduationCap, CheckCircle2, PenLine, Star, MessageSquare, ClipboardList } from 'lucide-react';
 import { SURVEYS } from '@/lib/survey';
+import { NEEDS_QUESTIONS } from '@/lib/positioning';
 
 const cls = (...a) => a.filter(Boolean).join(' ');
 
@@ -100,6 +101,67 @@ function SurveyForm({ kind, saving, onCancel, onSubmit }) {
   );
 }
 
+/* Positionnement : analyse du besoin + test de niveau (QCM). */
+function PositioningForm({ quiz, saving, onCancel, onSubmit }) {
+  const [answers, setAnswers] = useState({});
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const needsOk = NEEDS_QUESTIONS.filter((q) => q.required).every((q) => answers[q.id]);
+  const quizOk = (quiz || []).every((_, i) => quizAnswers[i] !== undefined);
+  const inp = 'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700';
+
+  return (
+    <div className="mt-3 space-y-3">
+      {NEEDS_QUESTIONS.map((q) => (
+        <div key={q.id}>
+          <label className="text-[11px] font-semibold text-slate-600">{q.label}{q.required && ' *'}</label>
+          {q.type === 'choice' ? (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {q.options.map((opt) => (
+                <button key={opt} type="button" onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                  className={cls('px-3 py-1.5 rounded-lg text-[11px] font-bold border', answers[q.id] === opt ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200')}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <textarea rows={2} value={answers[q.id] || ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+              className={cls(inp, 'mt-1 resize-none')} />
+          )}
+        </div>
+      ))}
+
+      {(quiz || []).length > 0 && (
+        <div className="pt-2 border-t border-slate-100">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Test de niveau</p>
+          <div className="space-y-3">
+            {quiz.map((item, i) => (
+              <div key={i}>
+                <p className="text-[11px] font-semibold text-slate-700">{i + 1}. {item.q}</p>
+                <div className="mt-1 space-y-1">
+                  {item.options.map((opt, j) => (
+                    <button key={j} type="button" onClick={() => setQuizAnswers((a) => ({ ...a, [i]: j }))}
+                      className={cls('w-full text-left px-3 py-1.5 rounded-lg text-[11px] border', quizAnswers[i] === j ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold' : 'bg-white border-slate-200 text-slate-600')}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">Annuler</button>
+        <button onClick={() => onSubmit(answers, quiz.map((_, i) => quizAnswers[i]))} disabled={!needsOk || !quizOk || saving}
+          className="flex-[2] py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50">
+          {saving ? 'Envoi…' : 'Valider mon positionnement'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PortailPage() {
   const [token, setToken] = useState('');
   const [data, setData] = useState(null);
@@ -109,6 +171,8 @@ export default function PortailPage() {
   const [saving, setSaving] = useState(false);
   const [survey, setSurvey] = useState(null); // { sessionId, kind } en cours
   const [savingSurvey, setSavingSurvey] = useState(false);
+  const [posOpen, setPosOpen] = useState(null); // sessionId dont le positionnement est ouvert
+  const [savingPos, setSavingPos] = useState(false);
 
   const load = useCallback(async (tok) => {
     try {
@@ -151,6 +215,20 @@ export default function PortailPage() {
       setSurvey(null); setSavingSurvey(false);
       load(token);
     } catch (e) { alert(e.message); setSavingSurvey(false); }
+  };
+
+  const submitPositioning = async (sessionId, answers, quizAnswers) => {
+    setSavingPos(true);
+    try {
+      const r = await fetch('/api/portal/positioning', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, sessionId, answers, quizAnswers }),
+      });
+      const d = await r.json();
+      if (!r.ok) { alert(d.error || 'Erreur lors de l’enregistrement.'); setSavingPos(false); return; }
+      setPosOpen(null); setSavingPos(false);
+      load(token);
+    } catch (e) { alert(e.message); setSavingPos(false); }
   };
 
   return (
@@ -203,6 +281,29 @@ export default function PortailPage() {
                       allSigned ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-500 bg-slate-50 border-slate-200')}>
                       {allSigned && <CheckCircle2 className="w-3.5 h-3.5" />} {s.signedCount}/{s.total} signée{s.total > 1 ? 's' : ''}
                     </span>
+                  </div>
+
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-4 mb-2">Positionnement</p>
+                  <div className={cls('rounded-xl border p-3', s.positioning && s.positioning.done ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100')}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ClipboardList className={cls('w-4 h-4 shrink-0', s.positioning && s.positioning.done ? 'text-emerald-500' : 'text-slate-400')} />
+                        <div className="min-w-0">
+                          <p className={cls('text-xs font-semibold', s.positioning && s.positioning.done ? 'text-emerald-700' : 'text-slate-700')}>
+                            Analyse du besoin{s.positioning && (s.positioning.quiz || []).length > 0 ? ' + test de niveau' : ''}
+                          </p>
+                          <p className="text-[10px] text-slate-400">À remplir avant la formation</p>
+                        </div>
+                      </div>
+                      {s.positioning && s.positioning.done ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 shrink-0"><CheckCircle2 className="w-3.5 h-3.5" /> Rempli</span>
+                      ) : posOpen !== s.id ? (
+                        <button onClick={() => setPosOpen(s.id)} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700 shrink-0">Remplir</button>
+                      ) : null}
+                    </div>
+                    {posOpen === s.id && (
+                      <PositioningForm quiz={s.positioning ? s.positioning.quiz : []} saving={savingPos} onCancel={() => setPosOpen(null)} onSubmit={(a, qa) => submitPositioning(s.id, a, qa)} />
+                    )}
                   </div>
 
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-4 mb-2">Émargement par demi-journée</p>

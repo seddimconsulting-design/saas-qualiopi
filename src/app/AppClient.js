@@ -263,6 +263,8 @@ export default function AppClient() {
   const [addTraineeId, setAddTraineeId] = useState('');
   const [inviteMsg, setInviteMsg] = useState(null); // { traineeId, link, email, emailed } | null
   const [satResponses, setSatResponses] = useState([]);
+  const [positionings, setPositionings] = useState([]);
+  const [quizDraft, setQuizDraft] = useState(null); // null = pas en édition ; sinon tableau de questions
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -524,8 +526,31 @@ export default function AppClient() {
       loadRoster(selectedSessionId);
     } catch (e) { setInviteMsg({ traineeId: tid, error: e.message }); }
   };
+  const loadPositionings = async (sid) => {
+    if (!sid) { setPositionings([]); return; }
+    const d = await fetch(`/api/positioning?sessionId=${sid}`).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (d) setPositionings(d.positionings || []);
+  };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setInviteMsg(null); loadRoster(selectedSessionId); }, [selectedSessionId]);
+  useEffect(() => { setInviteMsg(null); setQuizDraft(null); loadRoster(selectedSessionId); loadPositionings(selectedSessionId); }, [selectedSessionId]);
+
+  /* Éditeur de QCM de positionnement */
+  const startQuizEdit = () => setQuizDraft((selectedSession?.quiz || []).map(x => ({ q: x.q || '', options: [...(x.options || ['', ''])], correct: x.correct ?? 0 })));
+  const addQuestion = () => setQuizDraft(d => [...d, { q: '', options: ['', ''], correct: 0 }]);
+  const removeQuestion = (i) => setQuizDraft(d => d.filter((_, j) => j !== i));
+  const setQ = (i, patch) => setQuizDraft(d => d.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const setOpt = (i, j, val) => setQuizDraft(d => d.map((x, k) => (k === i ? { ...x, options: x.options.map((o, m) => (m === j ? val : o)) } : x)));
+  const addOpt = (i) => setQuizDraft(d => d.map((x, j) => (j === i ? { ...x, options: [...x.options, ''] } : x)));
+  const removeOpt = (i, j) => setQuizDraft(d => d.map((x, k) => (k === i ? { ...x, options: x.options.filter((_, m) => m !== j), correct: x.correct >= j && x.correct > 0 ? x.correct - 1 : x.correct } : x)));
+  const saveQuiz = async () => {
+    const clean = quizDraft
+      .map(x => ({ q: (x.q || '').trim(), options: x.options.map(o => (o || '').trim()).filter(Boolean), correct: Number(x.correct) || 0 }))
+      .filter(x => x.q && x.options.length >= 2)
+      .map(x => ({ ...x, correct: Math.min(x.correct, x.options.length - 1) }));
+    await api.patch('sessions', selectedSessionId, { quiz: clean });
+    setSessions(ss => ss.map(s => (s.id === selectedSessionId ? { ...s, quiz: clean } : s)));
+    setQuizDraft(null);
+  };
   const analyzeDoc = async () => {
     if (!aiForm.text.trim()) return;
     setAiLoading(true); setAiResult(null);
@@ -1008,6 +1033,64 @@ export default function AppClient() {
                         className={cls(btn, 'w-full justify-center bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700')}>
                         <Download className="w-3.5 h-3.5" /> Feuille d&apos;émargement signée (PDF)
                       </a>
+                    </div>
+
+                    {/* Positionnement : QCM + résultats */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Positionnement (test de niveau)</p>
+                        {quizDraft === null && (
+                          <button onClick={startQuizEdit} className="text-[10px] font-bold text-emerald-600 hover:underline">
+                            {(selectedSession.quiz || []).length ? 'Modifier le QCM' : 'Créer un QCM'}
+                          </button>
+                        )}
+                      </div>
+                      {quizDraft === null ? (
+                        <>
+                          <p className="text-[10px] text-slate-400">
+                            {(selectedSession.quiz || []).length
+                              ? `${selectedSession.quiz.length} question(s). Les stagiaires remplissent leur positionnement dans leur espace.`
+                              : 'Aucun QCM. Les stagiaires renseignent leurs besoins ; ajoutez un QCM pour un test noté.'}
+                          </p>
+                          {positionings.map((p, i) => (
+                            <div key={i} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-bold text-slate-800 truncate">{p.first} {p.last}</p>
+                                {p.score != null && <span className="text-[10px] font-bold text-emerald-700 shrink-0">{p.score}%</span>}
+                              </div>
+                              <p className="text-[10px] text-slate-500">Niveau déclaré : {(p.answers && p.answers.level) || '—'}</p>
+                              {p.answers && p.answers.objectives && <p className="text-[10px] text-slate-500 mt-0.5 italic">« {p.answers.objectives} »</p>}
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          {quizDraft.map((item, i) => (
+                            <div key={i} className="p-2.5 rounded-xl border border-slate-200 bg-white space-y-1.5">
+                              <div className="flex gap-1.5">
+                                <input value={item.q} onChange={e => setQ(i, { q: e.target.value })} placeholder={`Question ${i + 1}`}
+                                  className="flex-1 px-2 py-1.5 text-[11px] rounded border border-slate-200" />
+                                <button onClick={() => removeQuestion(i)} className="p-1 text-red-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                              </div>
+                              {item.options.map((opt, j) => (
+                                <div key={j} className="flex items-center gap-1.5 pl-2">
+                                  <input type="radio" checked={item.correct === j} onChange={() => setQ(i, { correct: j })} title="Bonne réponse" className="accent-emerald-600" />
+                                  <input value={opt} onChange={e => setOpt(i, j, e.target.value)} placeholder={`Réponse ${j + 1}`}
+                                    className="flex-1 px-2 py-1 text-[11px] rounded border border-slate-200" />
+                                  {item.options.length > 2 && <button onClick={() => removeOpt(i, j)} className="text-red-300 hover:text-red-500 text-sm leading-none">×</button>}
+                                </div>
+                              ))}
+                              <button onClick={() => addOpt(i)} className="text-[10px] text-emerald-600 font-bold pl-2">+ réponse</button>
+                            </div>
+                          ))}
+                          <button onClick={addQuestion} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}><Plus className="w-3.5 h-3.5" /> Ajouter une question</button>
+                          <div className="flex gap-2">
+                            <button onClick={() => setQuizDraft(null)} className={cls(btn, 'flex-1 justify-center bg-white border border-slate-200 text-slate-600')}>Annuler</button>
+                            <button onClick={saveQuiz} className={cls(btn, 'flex-[2] justify-center bg-emerald-600 text-white hover:bg-emerald-700')}><Save className="w-3.5 h-3.5" /> Enregistrer le QCM</button>
+                          </div>
+                          <p className="text-[10px] text-slate-400">Cochez le rond de la bonne réponse pour chaque question.</p>
+                        </div>
+                      )}
                     </div>
 
                     <button onClick={exportDossier} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>

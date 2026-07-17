@@ -13,9 +13,9 @@ export const COLLECTIONS = {
       title: 'title', trainer: 'trainer', start: 'start_date', end: 'end_date',
       duration: 'duration', status: 'status', trainees: 'trainees_count',
       handicap: 'handicap', handicapNote: 'handicap_note', price: 'price',
-      modality: 'modality', docs: 'docs',
+      modality: 'modality', docs: 'docs', quiz: 'quiz',
     },
-    json: ['docs'],
+    json: ['docs', 'quiz'],
     numbers: ['trainees', 'price'],
   },
   trainees: {

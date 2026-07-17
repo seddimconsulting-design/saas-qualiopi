@@ -108,6 +108,13 @@ ON CONFLICT (session_id, trainee_id) DO NOTHING;
 
 -- Repart d'un émargement démo propre (les tests utilisaient des images factices)
 DELETE FROM attendances WHERE tenant_id = '${T}';
+
+-- QCM de positionnement de démonstration sur la session dc-s1
+UPDATE app_sessions SET quiz = '[
+  {"q":"Le management hybride combine :","options":["Uniquement du presentiel","Presentiel et distanciel","Uniquement du distanciel"],"correct":1},
+  {"q":"Un bon manager a distance privilegie :","options":["Le controle permanent","La confiance et des points reguliers","Aucune communication"],"correct":1}
+]'::jsonb
+WHERE id = 'dc-s1' AND tenant_id = '${T}';
 `;
 
   try {

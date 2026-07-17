@@ -237,6 +237,23 @@ CREATE TABLE IF NOT EXISTS trainee_tokens (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Test de positionnement (QCM) défini par l'organisme, stocké sur la session.
+ALTER TABLE app_sessions ADD COLUMN IF NOT EXISTS quiz JSONB DEFAULT '[]'::jsonb;
+
+-- Positionnement rempli par le stagiaire (analyse du besoin + test de niveau).
+CREATE TABLE IF NOT EXISTS positionings (
+    id           TEXT PRIMARY KEY,
+    tenant_id    TEXT NOT NULL,
+    session_id   TEXT NOT NULL,
+    trainee_id   TEXT NOT NULL,
+    answers      JSONB,                    -- réponses à l'analyse du besoin
+    quiz_answers JSONB,                    -- réponses au QCM (index choisis)
+    score        NUMERIC(5,2),             -- score du QCM en % (si QCM)
+    submitted_at TIMESTAMPTZ DEFAULT now(),
+    signer_ip    TEXT,
+    UNIQUE (session_id, trainee_id)
+);
+
 -- Réponses de satisfaction déposées par le stagiaire (à chaud / à froid).
 CREATE TABLE IF NOT EXISTS satisfaction_responses (
     id           TEXT PRIMARY KEY,
