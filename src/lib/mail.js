@@ -43,6 +43,28 @@ export function sendColdSurveyEmail(to, traineeName, ofName, link) {
   });
 }
 
+export function sendConvocationEmail(to, traineeName, ofName, session, link) {
+  const dates = [session.start_date, session.end_date].filter(Boolean).join(' au ');
+  return send({
+    to,
+    subject: `Convocation — ${session.title || 'votre formation'}`,
+    html: wrap(`
+      <p>Bonjour ${esc(traineeName || '')},</p>
+      <p>Nous vous confirmons votre inscription à la formation <strong>${esc(session.title || '')}</strong>
+      organisée par ${esc(ofName || 'notre organisme')}.</p>
+      <ul>
+        ${dates ? `<li><strong>Dates :</strong> ${esc(dates)}</li>` : ''}
+        ${session.duration ? `<li><strong>Durée :</strong> ${esc(session.duration)}</li>` : ''}
+        ${session.modality ? `<li><strong>Modalité :</strong> ${esc(session.modality)}</li>` : ''}
+        ${session.trainer ? `<li><strong>Formateur :</strong> ${esc(session.trainer)}</li>` : ''}
+      </ul>
+      <p>Depuis votre espace personnel, vous pourrez signer votre présence à chaque demi-journée,
+      remplir votre positionnement et récupérer vos documents :</p>
+      <p><a href="${link}" style="color:#059669;font-weight:bold">Accéder à mon espace stagiaire</a></p>
+      <p style="color:#777;font-size:12px">Besoin d'un aménagement (situation de handicap) ? Répondez à cet e-mail.</p>`),
+  });
+}
+
 export function sendFeedbackEmail({ from, ofName, message }) {
   const to = process.env.FEEDBACK_TO || 'contact@certivia.app';
   return send({

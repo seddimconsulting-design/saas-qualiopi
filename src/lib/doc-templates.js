@@ -10,6 +10,18 @@ export const OF = {
 
 export const TEMPLATES = [
   {
+    id: 'convocation', indicators: [9], title: 'Convocation à une action de formation',
+    intro: "Nous avons le plaisir de vous confirmer votre inscription à la formation ci-dessous et vous en précisons les conditions de déroulement.",
+    sections: [
+      { h: 'Participant', body: "Nom du participant : {{traineeName}}. Adresse électronique : {{traineeEmail}}." },
+      { h: 'Formation', body: "Intitulé : {{sessionTitle}}. Formateur : {{trainer}}. Durée : {{duration}}. Modalité : {{modality}}." },
+      { h: 'Dates et horaires', body: "Du {{startDate}} au {{endDate}}. Horaires : ……h…… – ……h…… (accueil 15 minutes avant le début de la première demi-journée)." },
+      { h: 'Lieu et accès', body: "Lieu : {{ofAddress}}. Modalités d'accès et de stationnement : ……. Pour une formation à distance, le lien de connexion vous est transmis avec la présente convocation." },
+      { h: 'Modalités pratiques', body: "Merci de vous munir de ……. L'émargement est signé en ligne depuis votre espace stagiaire, pour chaque demi-journée." },
+      { h: 'Accessibilité et contact', body: "Si vous êtes en situation de handicap ou avez besoin d'un aménagement, contactez notre référent handicap : {{ofEmail}} — {{ofPhone}}. Nous étudierons avec vous les adaptations possibles." },
+    ],
+  },
+  {
     id: 'convention', indicators: [9], title: 'Convention de formation professionnelle',
     intro: "Entre l'organisme de formation soussigné et le client (l'entreprise ou le bénéficiaire), il est convenu ce qui suit, en application des articles L.6353-1 et suivants du Code du travail.",
     sections: [

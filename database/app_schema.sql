@@ -244,6 +244,8 @@ ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS trial_end TIMESTAMPTZ;
 
 -- Suivi de la relance "satisfaction à froid" (J+90) par inscription.
 ALTER TABLE session_trainees ADD COLUMN IF NOT EXISTS cold_invited_at TIMESTAMPTZ;
+-- Suivi de l'envoi des convocations.
+ALTER TABLE session_trainees ADD COLUMN IF NOT EXISTS convoked_at TIMESTAMPTZ;
 
 -- Jeton d'accès stagiaire (lien magique, un actif par stagiaire).
 CREATE TABLE IF NOT EXISTS trainee_tokens (

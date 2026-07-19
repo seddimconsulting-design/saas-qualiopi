@@ -255,6 +255,8 @@ export default function AppClient() {
   const [navOpen, setNavOpen] = useState(false); // menu latéral mobile
   const [profil, setProfil] = useState({}); // profil d'activité → indicateurs applicables
   const [proofs, setProofs] = useState({}); // preuves réelles (émargements, positionnements, satisfaction)
+  const [bpfYear, setBpfYear] = useState(new Date().getFullYear() - 1);
+  const [bpf, setBpf] = useState(null);
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -524,6 +526,14 @@ export default function AppClient() {
     await fetch(`/api/roster?sessionId=${selectedSessionId}&traineeId=${tid}`, { method: 'DELETE' });
     loadRoster(selectedSessionId);
   };
+  const convokeSession = async () => {
+    setInviteMsg({ loading: true });
+    try {
+      const r = await fetch('/api/roster/convoke', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ sessionId: selectedSessionId }) }).then(x => x.json());
+      setInviteMsg({ convoke: r });
+      loadRoster(selectedSessionId);
+    } catch (e) { setInviteMsg({ error: e.message }); }
+  };
   const inviteTrainee = async (tid) => {
     setInviteMsg({ traineeId: tid, loading: true });
     try {
@@ -539,6 +549,12 @@ export default function AppClient() {
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setInviteMsg(null); setQuizDraft(null); loadRoster(selectedSessionId); loadPositionings(selectedSessionId); }, [selectedSessionId]);
+
+  // Bilan pédagogique et financier de l'année sélectionnée
+  useEffect(() => {
+    setBpf(null);
+    fetch(`/api/bpf?year=${bpfYear}`).then(r => r.ok ? r.json() : null).then(d => { if (d) setBpf(d); }).catch(() => {});
+  }, [bpfYear]);
 
   /* Éditeur de QCM de positionnement */
   const startQuizEdit = () => setQuizDraft((selectedSession?.quiz || []).map(x => ({ q: x.q || '', options: [...(x.options || ['', ''])], correct: x.correct ?? 0 })));
@@ -1042,6 +1058,17 @@ export default function AppClient() {
                         </div>
                         );
                       })}
+                      {roster.enrolled.length > 0 && (
+                        <button onClick={convokeSession} className={cls(btn, 'w-full justify-center bg-slate-100 text-slate-600 hover:bg-slate-200')}>
+                          <Bell className="w-3.5 h-3.5" /> Envoyer les convocations
+                        </button>
+                      )}
+                      {inviteMsg && inviteMsg.convoke && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700">
+                          Convocations envoyées : {inviteMsg.convoke.sent}/{inviteMsg.convoke.inscrits}
+                          {inviteMsg.convoke.sansEmail > 0 ? ` · ${inviteMsg.convoke.sansEmail} stagiaire(s) sans e-mail` : ''}
+                        </div>
+                      )}
                       {inviteMsg && inviteMsg.link && (
                         <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700 break-all">
                           {inviteMsg.emailed ? `Lien envoyé par e-mail à ${inviteMsg.email}. ` : 'Aucun e-mail pour ce stagiaire — copiez le lien : '}
@@ -1456,6 +1483,44 @@ export default function AppClient() {
                 <KpiCard label="CA total" value={`${(totalCA/1000).toFixed(1)}k€`} icon={Euro} color="emerald" />
                 <KpiCard label="Devis acceptés" value={devis.filter(d => d.status === 'Accepté').length} icon={CheckCircle2} color="emerald" />
                 <KpiCard label="En attente" value={devis.filter(d => d.status === 'En attente').length} icon={Clock} color="amber" />
+              </div>
+
+              {/* Bilan Pédagogique et Financier */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-900">Bilan Pédagogique et Financier (BPF)</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Obligation annuelle — à déposer avant le 31 mai sur « Mon Activité Formation » pour l&apos;année civile écoulée.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select value={bpfYear} onChange={e => setBpfYear(+e.target.value)}
+                      className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700">
+                      {[0, 1, 2].map(k => { const y = new Date().getFullYear() - k; return <option key={y} value={y}>{y}</option>; })}
+                    </select>
+                    <a href={`/api/bpf?year=${bpfYear}&format=pdf`} target="_blank" rel="noopener noreferrer"
+                      className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}>
+                      <Download className="w-3.5 h-3.5" /> Télécharger
+                    </a>
+                  </div>
+                </div>
+                {bpf ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { l: 'Actions réalisées', v: bpf.sessions },
+                      { l: 'Stagiaires', v: bpf.stagiaires },
+                      { l: 'Heures-stagiaires', v: bpf.heuresStagiaires.toLocaleString('fr-FR') },
+                      { l: 'Produits', v: `${(bpf.produits || 0).toLocaleString('fr-FR')} €` },
+                    ].map(x => (
+                      <div key={x.l} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400">{x.l}</p>
+                        <p className="text-sm font-black text-slate-900 mt-0.5">{x.v}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-[11px] text-slate-400">Calcul en cours…</p>}
+                <p className="text-[10px] text-slate-400">Vérifiez les montants avec votre comptabilité : le BPF engage votre organisme.</p>
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
