@@ -33,7 +33,10 @@ export function origineDesFonds(typeClient) {
 export function computeBpf({ year, sessions, effectifs = {}, devis = [], clients = [] }) {
   const inYear = (d) => typeof d === 'string' && d.slice(0, 4) === String(year);
 
-  const retenues = sessions.filter(s => s.status !== 'Annulé' && inYear(s.end || s.start));
+  // Le BPF ne déclare que les actions RÉALISÉES : on exclut les sessions
+  // annulées et celles encore à l'état de projet (non tenues).
+  const REALISEES = ['Terminé', 'Actif'];
+  const retenues = sessions.filter(s => REALISEES.includes(s.status) && inYear(s.end || s.start));
   let stagiaires = 0, heuresStagiaires = 0, produits = 0;
   const detail = retenues.map(s => {
     const nb = effectifs[s.id] != null ? effectifs[s.id] : (s.trainees || 0);
