@@ -10,6 +10,7 @@ import {
   ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut, Settings, Menu
 } from 'lucide-react';
 import { TEMPLATES } from '@/lib/doc-templates';
+import { INDICATEURS_CATALOG, CRITERES, PROFILS, isApplicable } from '@/lib/indicators-catalog';
 
 const IMG_EXT = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tif', 'tiff'];
 
@@ -108,128 +109,113 @@ function KpiCard({ label, value, sub, icon: Icon, color = 'emerald', trend }) {
   );
 }
 
-/* ─── Indicator badge 32 indicateurs ─── */
-const INDICATEURS = [
-  { id: 1, crit: 1, label: "Info publics sur objectifs & résultats", ok: true },
-  { id: 2, crit: 1, label: "Identification des prérequis & profils", ok: true },
-  { id: 3, crit: 1, label: "Délais et modalités d'accès", ok: true },
-  { id: 4, crit: 1, label: "Accessibilité handicap", ok: false },
-  { id: 5, crit: 2, label: "Contenu et objectifs pédagogiques", ok: true },
-  { id: 6, crit: 2, label: "Adaptation des modalités pédagogiques", ok: true },
-  { id: 7, crit: 2, label: "Adéquation ressources humaines", ok: true },
-  { id: 8, crit: 2, label: "Positionnement à l'entrée", ok: false },
-  { id: 9, crit: 2, label: "Évaluation des acquis en cours", ok: true },
-  { id: 10, crit: 2, label: "Évaluation des acquis en fin", ok: true },
-  { id: 11, crit: 2, label: "Accompagnement des apprenants", ok: true },
-  { id: 12, crit: 2, label: "Suivi des apprentissages foad/distanciel", ok: false },
-  { id: 13, crit: 3, label: "Recueil de la satisfaction à chaud", ok: false },
-  { id: 14, crit: 3, label: "Recueil de la satisfaction à froid", ok: false },
-  { id: 15, crit: 3, label: "Exploitation des résultats satisfaction", ok: false },
-  { id: 16, crit: 3, label: "Indicateurs de résultats communiqués", ok: true },
-  { id: 17, crit: 4, label: "Coordination des acteurs internes/externes", ok: true },
-  { id: 18, crit: 4, label: "Qualification des formateurs", ok: true },
-  { id: 19, crit: 4, label: "Maintien et développement compétences formateurs", ok: false },
-  { id: 20, crit: 4, label: "Moyens techniques et pédagogiques adaptés", ok: true },
-  { id: 21, crit: 4, label: "Locaux accessibles et adaptés", ok: true },
-  { id: 22, crit: 4, label: "Gestion des sous-traitants", ok: false },
-  { id: 23, crit: 5, label: "Veilles réglementaires et sectorielles", ok: true },
-  { id: 24, crit: 5, label: "Mise en œuvre et traçabilité des veilles", ok: false },
-  { id: 25, crit: 6, label: "Traçabilité des actions de formation", ok: true },
-  { id: 26, crit: 6, label: "Communication avec financeurs/prescripteurs", ok: true },
-  { id: 27, crit: 6, label: "Recueil besoins prescripteurs/financeurs", ok: false },
-  { id: 28, crit: 6, label: "Mise en relation prescripteurs/apprenants", ok: false },
-  { id: 29, crit: 7, label: "Mesure de la satisfaction parties prenantes", ok: true },
-  { id: 30, crit: 7, label: "Traitement des réclamations", ok: false },
-  { id: 31, crit: 7, label: "Gestion des non-conformités", ok: true },
-  { id: 32, crit: 7, label: "Amélioration continue", ok: false },
-];
-const CRITERES_LABELS = {
-  1: "Information du public",
-  2: "Conception pédagogique",
-  3: "Satisfaction & résultats",
-  4: "Ressources & moyens",
-  5: "Veille & amélioration",
-  6: "Traçabilité & relations",
-  7: "Processus qualité",
-};
+/* ─── Référentiel officiel (source unique : src/lib/indicators-catalog.js) ─── */
+const INDICATEURS = INDICATEURS_CATALOG;
+/* Critères officiels du Référentiel National Qualité */
+const CRITERES_LABELS = CRITERES;
 
 /* ─── statuts & moteur de preuve ─── */
 const IND_STATUS = {
   conforme: { label: 'Conforme', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
   partiel:  { label: 'Partiel',  badge: 'bg-amber-50 text-amber-700 border-amber-100',       dot: 'bg-amber-400' },
   manquant: { label: 'Manquant', badge: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-400' },
+  na:       { label: 'N/A',      badge: 'bg-slate-50 text-slate-400 border-slate-200',       dot: 'bg-slate-300' },
 };
 const STATUS_WEIGHT = { conforme: 1, partiel: 0.5, manquant: 0 };
-const IND_TAB = { 4:'sessions',8:'sessions',9:'sessions',10:'sessions',13:'satisfaction',14:'satisfaction',15:'satisfaction',16:'indicateurs',18:'sessions',23:'veilles',24:'veilles',25:'sessions',29:'satisfaction',30:'reclamations',31:'pac',32:'pac' };
+/* Onglet vers lequel renvoyer pour documenter un indicateur (numerotation RNQ officielle). */
+const IND_TAB = { 2:'indicateurs',4:'sessions',8:'sessions',9:'sessions',10:'trainees',11:'sessions',12:'sessions',
+  17:'organisme',18:'organisme',19:'documents',21:'sessions',22:'organisme',23:'veilles',24:'veilles',25:'veilles',
+  26:'sessions',27:'documents',30:'satisfaction',31:'reclamations',32:'pac' };
 
 const mk = (status, evidence = [], gaps = []) => ({ status, evidence, gaps });
 
-/* Règles déterministes : chaque indicateur dérive son statut des données réelles. */
-function buildIndicators(d, manual = {}) {
+/* Regles deterministes : chaque indicateur derive son statut des donnees reelles
+   de l'organisme, dont les preuves collectees via l'espace stagiaire. */
+function buildIndicators(d, manual = {}, profil = {}, proofs = {}) {
   const { sessions, trainees, veilles, reclamations, pac } = d;
   const n = sessions.length;
-  const tN = trainees.length;
   const rate = (a, b) => (b === 0 ? 0 : a / b);
   const tri = (r, ev, gap) => (r >= 1 ? mk('conforme', ev) : r > 0 ? mk('partiel', ev, [gap]) : mk('manquant', [], [gap]));
 
-  const withPos = sessions.filter(s => s.docs?.positioning).length;
-  const withCert = sessions.filter(s => s.docs?.certificate).length;
+  const withCert = sessions.filter(s => s.docs && s.docs.certificate).length;
+  const withConv = sessions.filter(s => s.docs && s.docs.convention).length;
   const withTrainer = sessions.filter(s => s.trainer).length;
-  const totalDocs = sessions.reduce((a, s) => a + (s.docs ? Object.values(s.docs).filter(Boolean).length : 0), 0);
-  const maxDocs = n * 4;
-  const hot = trainees.filter(t => t.satHot).length;
-  const cold = trainees.filter(t => t.satCold).length;
   const sHandi = sessions.filter(s => s.handicap);
   const handiNoNote = sHandi.filter(s => !s.handicapNote);
-  const openRec = reclamations.filter(r => r.status !== 'Résolue');
-  const pacDone = pac.filter(p => p.status === 'Terminé');
+  const openRec = reclamations.filter(r => r.status !== 'Resolue' && r.status !== 'R\u00e9solue');
+  const pacDone = pac.filter(p => p.status === 'Termine' || p.status === 'Termin\u00e9');
+
+  const att = proofs.attendance || [];
+  const signedSlots = att.reduce((a, x) => a + (x.signed || 0), 0);
+  const totalSlots = att.reduce((a, x) => a + (x.total || 0), 0);
+  const posCount = proofs.positionings || 0;
+  const enrollments = proofs.enrollments || 0;
+  const satChaud = (proofs.surveys && proofs.surveys.chaud) || 0;
+  const satFroid = (proofs.surveys && proofs.surveys.froid) || 0;
+  const withQuiz = sessions.filter(s => (s.quiz || []).length > 0).length;
+
+  const norm = (v) => ((v.type || '') + ' ' + (v.summary || '')).toLowerCase();
+  const vLegal = veilles.filter(v => /l\u00e9gal|legal|r\u00e9glement|reglement|juridique|d\u00e9cret|decret|loi/.test(norm(v)));
+  const vMetier = veilles.filter(v => /m\u00e9tier|metier|emploi|comp\u00e9tence|competence|branche|secteur/.test(norm(v)));
+  const vPedago = veilles.filter(v => /p\u00e9dagog|pedagog|techno|innovation|num\u00e9rique|numerique|outil/.test(norm(v)));
+  const veille = (list, libelle) => (list.some(v => v.exploit)
+    ? mk('conforme', [list.length + ' veille(s) ' + libelle + ' exploitee(s)'])
+    : list.length > 0
+      ? mk('partiel', [list.length + ' veille(s) ' + libelle], ["Documenter l'exploitation de la veille"])
+      : mk('manquant', [], ['Enregistrer une veille ' + libelle]));
 
   const RULES = {
-    4: () => (sHandi.length === 0
-        ? mk('partiel', [], ['Désigner un référent handicap et formaliser la procédure'])
+    2: () => (withCert > 0 || satChaud > 0
+        ? mk('conforme', ['Resultats disponibles (reussite / satisfaction) et publiables'])
+        : mk('partiel', [], ['Aucun resultat a publier pour le moment'])),
+    4: () => (enrollments === 0
+        ? mk('manquant', [], ['Inscrire des stagiaires et recueillir leur analyse du besoin'])
+        : tri(rate(posCount, enrollments), [posCount + '/' + enrollments + ' analyse(s) du besoin recueillie(s)'], 'Recueillir le besoin des stagiaires restants')),
+    8: () => (posCount > 0 || withQuiz > 0
+        ? mk('conforme', ['Positionnement a l entree en place' + (withQuiz ? ' (' + withQuiz + ' session(s) avec test)' : '')])
+        : mk('manquant', [], ['Mettre en place le positionnement a l entree (espace stagiaire)'])),
+    9: () => tri(rate(withConv, n), [withConv + '/' + n + ' session(s) avec convention/contrat'], 'Formaliser les conditions de deroulement'),
+    11: () => tri(rate(withCert, n), [withCert + '/' + n + ' session(s) avec evaluation finale/certificat'], 'Emettre les evaluations de fin manquantes'),
+    12: () => (totalSlots === 0
+        ? mk('manquant', [], ['Mettre en place l emargement signe (espace stagiaire)'])
+        : tri(rate(signedSlots, totalSlots), [signedSlots + '/' + totalSlots + ' demi-journee(s) emargee(s) et signee(s)'], 'Faire signer les demi-journees restantes')),
+    21: () => tri(rate(withTrainer, n), [withTrainer + '/' + n + ' session(s) avec intervenant identifie'], 'Identifier et documenter les intervenants'),
+    23: () => veille(vLegal, 'legale et reglementaire'),
+    24: () => veille(vMetier, 'metiers et competences'),
+    25: () => veille(vPedago, 'pedagogique et technologique'),
+    26: () => (sHandi.length === 0
+        ? mk('partiel', [], ['Designer un referent handicap et formaliser la procedure d accueil'])
         : handiNoNote.length > 0
-          ? mk('partiel', [`${sHandi.length - handiNoNote.length}/${sHandi.length} session(s) handicap documentée(s)`], [`${handiNoNote.length} session(s) handicap sans note d'aménagement`])
-          : mk('conforme', [`Aménagements documentés (${sHandi.length} session(s))`])),
-    8: () => tri(rate(withPos, n), [`${withPos}/${n} sessions avec positionnement amont`], 'Ajouter le test de positionnement aux sessions manquantes'),
-    9: () => tri(rate(totalDocs, maxDocs), [`Traçabilité des acquis : ${totalDocs}/${maxDocs} documents`], 'Compléter les évaluations et émargements'),
-    10: () => tri(rate(withCert, n), [`${withCert}/${n} sessions avec certificat de réalisation`], 'Émettre les certificats de réalisation manquants'),
-    13: () => tri(rate(hot, tN), [`${hot}/${tN} évaluations à chaud recueillies`], 'Collecter la satisfaction à chaud manquante'),
-    14: () => tri(rate(cold, tN), [`${cold}/${tN} évaluations à froid recueillies`], 'Lancer les enquêtes à froid (J+90)'),
-    15: () => (pac.length > 0
-        ? mk('conforme', ["Résultats exploités via le plan d'amélioration"])
-        : mk('partiel', [], ["Analyser les évaluations dans le plan d'amélioration"])),
-    16: () => (withCert > 0
-        ? mk('conforme', ['Taux de réussite calculables et publiables'])
-        : mk('partiel', [], ["Aucun résultat à communiquer pour l'instant"])),
-    18: () => tri(rate(withTrainer, n), [`${withTrainer}/${n} sessions avec formateur assigné`], 'Assigner et documenter un formateur qualifié'),
-    23: () => (veilles.length > 0
-        ? mk('conforme', [`${veilles.length} veille(s) enregistrée(s)`])
-        : mk('manquant', [], ['Enregistrer au moins une veille réglementaire'])),
-    24: () => (veilles.some(v => v.exploit)
-        ? mk('conforme', ['Veilles exploitées et tracées'])
-        : veilles.length > 0 ? mk('partiel', [], ["Documenter l'exploitation des veilles"]) : mk('manquant', [], ['Aucune veille exploitée'])),
-    25: () => tri(rate(totalDocs, maxDocs), [`Dossiers de session : ${totalDocs}/${maxDocs} documents`], 'Compléter les documents de traçabilité'),
-    29: () => (hot > 0 || cold > 0
-        ? mk('conforme', [`Satisfaction mesurée (${hot + cold} retours)`])
-        : mk('manquant', [], ['Mesurer la satisfaction des parties prenantes'])),
-    30: () => (reclamations.length === 0
-        ? mk('partiel', [], ['Mettre en place le registre des réclamations'])
+          ? mk('partiel', [(sHandi.length - handiNoNote.length) + '/' + sHandi.length + ' session(s) avec amenagement documente'], [handiNoNote.length + ' session(s) handicap sans note d amenagement'])
+          : mk('conforme', ['Amenagements documentes (' + sHandi.length + ' session(s))'])),
+    30: () => (satChaud + satFroid === 0
+        ? mk('manquant', [], ['Recueillir les appreciations (satisfaction a chaud puis a froid)'])
+        : satFroid === 0
+          ? mk('partiel', [satChaud + ' evaluation(s) a chaud recueillie(s)'], ['Lancer les evaluations a froid (J+90)'])
+          : mk('conforme', [satChaud + ' a chaud + ' + satFroid + ' a froid recueillies'])),
+    31: () => (reclamations.length === 0
+        ? mk('partiel', [], ['Ouvrir et formaliser le registre des reclamations'])
         : openRec.length > 0
-          ? mk('partiel', [`${reclamations.length - openRec.length} réclamation(s) traitée(s)`], [`${openRec.length} réclamation(s) ouverte(s) à traiter`])
-          : mk('conforme', [`${reclamations.length} réclamation(s) traitée(s)`])),
-    31: () => (pac.length > 0
-        ? mk('conforme', [`${pac.length} action(s) de non-conformité suivie(s)`])
-        : mk('manquant', [], ['Ouvrir le registre des non-conformités'])),
+          ? mk('partiel', [(reclamations.length - openRec.length) + ' reclamation(s) traitee(s)'], [openRec.length + ' reclamation(s) ouverte(s)'])
+          : mk('conforme', [reclamations.length + ' reclamation(s) traitee(s)'])),
     32: () => (pacDone.length > 0
-        ? mk('conforme', [`${pacDone.length} action(s) d'amélioration finalisée(s)`])
-        : pac.length > 0 ? mk('partiel', [], ["Finaliser les actions du plan d'amélioration"]) : mk('manquant', [], ['Initier le plan d\'amélioration continue'])),
+        ? mk('conforme', [pacDone.length + ' action(s) d amelioration finalisee(s)'])
+        : pac.length > 0
+          ? mk('partiel', [pac.length + ' action(s) engagee(s)'], ['Finaliser les actions du plan d amelioration'])
+          : mk('manquant', [], ['Initier le plan d amelioration continue'])),
   };
 
   return INDICATEURS.map(meta => {
+    if (!isApplicable(meta, profil)) {
+      return Object.assign({}, meta, { status: 'na', evidence: [], gaps: [], auto: false, applicable: false });
+    }
+    const manualStatus = manual[meta.id];
     const r = RULES[meta.id];
-    if (r) return { ...meta, ...r(), auto: true };
-    const status = manual[meta.id] || (meta.ok ? 'conforme' : 'manquant');
-    return { ...meta, status, evidence: [], gaps: status === 'conforme' ? [] : ['À documenter manuellement'], auto: false };
+    if (manualStatus) {
+      return Object.assign({}, meta, { status: manualStatus, evidence: [], gaps: manualStatus === 'conforme' ? [] : ['A documenter'], auto: false, applicable: true });
+    }
+    if (r) return Object.assign({}, meta, r(), { auto: true, applicable: true });
+    return Object.assign({}, meta, { status: 'manquant', evidence: [], gaps: ['A documenter et justifier'], auto: false, applicable: true });
   });
 }
 
@@ -267,6 +253,8 @@ export default function AppClient() {
   const [quizDraft, setQuizDraft] = useState(null); // null = pas en édition ; sinon tableau de questions
   const [billing, setBilling] = useState(null);
   const [navOpen, setNavOpen] = useState(false); // menu latéral mobile
+  const [profil, setProfil] = useState({}); // profil d'activité → indicateurs applicables
+  const [proofs, setProofs] = useState({}); // preuves réelles (émargements, positionnements, satisfaction)
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -294,12 +282,17 @@ export default function AppClient() {
         setDevis(d.devis || []);
         setDocuments(d.documents || []);
         setManualStatus(d.manualStatus || {});
+        setProfil(d.profil || {});
+        setProofs(d.proofs || {});
       })
       .catch(e => setDbError(e.message))
       .finally(() => setLoading(false));
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(setMe).catch(() => {});
     fetch('/api/profile').then(r => r.ok ? r.json() : null).then(p => {
-      if (p) setProfile({ name: p.name || '', nda: p.nda || '', address: p.address || '', email: p.email || '', phone: p.phone || '', logo: p.logo || '' });
+      if (p) {
+        setProfile({ name: p.name || '', nda: p.nda || '', address: p.address || '', email: p.email || '', phone: p.phone || '', logo: p.logo || '' });
+        if (p.profil) setProfil(p.profil);
+      }
     }).catch(() => {});
     fetch('/api/team').then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
@@ -339,8 +332,9 @@ export default function AppClient() {
   };
   const saveProfile = async () => {
     setOrgMsg('');
-    const r = await fetch('/api/profile', { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(profile) }).then(x => x.json());
+    const r = await fetch('/api/profile', { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify({ ...profile, profil }) }).then(x => x.json());
     if (r.error) { setOrgMsg(r.error); return; }
+    if (r.profil) setProfil(r.profil);
     setProfile({ name: r.name || '', nda: r.nda || '', address: r.address || '', email: r.email || '', phone: r.phone || '', logo: r.logo || '' });
     setMe(m => (m ? { ...m, ofName: r.name } : m));
     setOrgMsg('Profil enregistré.');
@@ -401,9 +395,13 @@ export default function AppClient() {
   const activeSess  = sessions.filter(s => s.status === 'Actif').length;
   const openRec     = reclamations.filter(r => r.status !== 'Résolue').length;
   const totalCA     = sessions.filter(s => s.status !== 'Annulé').reduce((a, s) => a + (s.price || 0), 0);
-  const liveInd     = useMemo(() => buildIndicators({ sessions, trainees, veilles, reclamations, pac }, manualStatus), [sessions, trainees, veilles, reclamations, pac, manualStatus]);
-  const indOk       = liveInd.filter(i => i.status === 'conforme').length;
-  const readiness   = Math.round(liveInd.reduce((a, i) => a + STATUS_WEIGHT[i.status], 0) / INDICATEURS.length * 100);
+  const liveInd     = useMemo(() => buildIndicators({ sessions, trainees, veilles, reclamations, pac }, manualStatus, profil, proofs),
+    [sessions, trainees, veilles, reclamations, pac, manualStatus, profil, proofs]);
+  // Seuls les indicateurs applicables au profil de l'organisme comptent dans le score.
+  const applicableInd = liveInd.filter(i => i.applicable !== false);
+  const indTotal    = applicableInd.length;
+  const indOk       = applicableInd.filter(i => i.status === 'conforme').length;
+  const readiness   = indTotal ? Math.round(applicableInd.reduce((a, i) => a + STATUS_WEIGHT[i.status], 0) / indTotal * 100) : 0;
   const satScores   = trainees.filter(t => t.satHot).map(t => t.satHot);
   const avgSat      = satScores.length ? (satScores.reduce((a,b) => a+b, 0) / satScores.length).toFixed(1) : '–';
 
@@ -467,11 +465,11 @@ export default function AppClient() {
   };
 
   /* moteur de preuve : écarts + export dossier d'audit */
-  const gaps = liveInd.filter(i => i.status !== 'conforme');
+  const gaps = applicableInd.filter(i => i.status !== 'conforme');
   const cycleStatus = (id) => {
     const order = ['manquant', 'partiel', 'conforme'];
     setManualStatus(p => {
-      const cur = p[id] || (INDICATEURS.find(i => i.id === id)?.ok ? 'conforme' : 'manquant');
+      const cur = p[id] || 'manquant';
       const next = order[(order.indexOf(cur) + 1) % order.length];
       api.setInd(id, next);
       return { ...p, [id]: next };
@@ -480,7 +478,7 @@ export default function AppClient() {
   const exportDossier = () => {
     const L = [];
     L.push("DOSSIER D'AUDIT QUALIOPI — Sokai Formation");
-    L.push(`Audit-readiness : ${readiness}%  (${indOk}/32 indicateurs conformes)`);
+    L.push(`Audit-readiness : ${readiness}%  (${indOk}/${indTotal} indicateurs applicables conformes)`);
     L.push('Généré le ' + new Date().toLocaleDateString('fr-FR'));
     L.push('');
     Object.entries(CRITERES_LABELS).forEach(([k, l]) => {
@@ -720,7 +718,7 @@ export default function AppClient() {
             </button>
             <div className="min-w-0">
               <h2 className="text-sm font-extrabold text-slate-900 truncate">{navItems.find(n => n.key === tab)?.label}</h2>
-              <p className="text-[11px] text-slate-400 truncate">{me?.ofName || '…'} · 32 indicateurs Qualiopi</p>
+              <p className="text-[11px] text-slate-400 truncate">{me?.ofName || '…'} · {indTotal} indicateurs applicables</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -815,7 +813,7 @@ export default function AppClient() {
 
               {/* KPIs */}
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="emerald" sub={`${indOk}/32 indicateurs`} trend={5} />
+                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="emerald" sub={`${indOk}/${indTotal} indicateurs`} trend={5} />
                 <KpiCard label="Sessions actives" value={activeSess} icon={Calendar} color="blue" sub={`${sessions.length} au total`} />
                 <KpiCard label="Stagiaires" value={trainees.length} icon={Users} color="violet" sub="inscrits" trend={12} />
                 <KpiCard label="Satisfaction" value={`${avgSat}/5`} icon={Star} color="amber" sub="éval. à chaud moy." />
@@ -911,7 +909,7 @@ export default function AppClient() {
                       { l: "Heures de formation", v: sessions.reduce((a, s) => a + parseInt(s.duration), 0) + 'h' },
                       { l: "CA total", v: `${(totalCA/1000).toFixed(1)}k€` },
                       { l: "Taux satisfaction moyen", v: `${avgSat}/5` },
-                      { l: "Indicateurs conformes", v: `${indOk}/32` },
+                      { l: "Indicateurs conformes", v: `${indOk}/${indTotal}` },
                     ].map(({ l, v }) => (
                       <div key={l} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                         <p className="text-[10px] text-slate-500 font-semibold">{l}</p>
@@ -1373,31 +1371,35 @@ export default function AppClient() {
           {tab === 'indicateurs' && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
-                <KpiCard label="Conformes" value={indOk} icon={CheckCircle2} color="emerald" sub={`sur 32 indicateurs`} />
-                <KpiCard label="À corriger" value={32 - indOk} icon={AlertTriangle} color="amber" />
-                <KpiCard label="Taux global" value={`${Math.round(indOk / 32 * 100)}%`} icon={Shield} color="emerald" />
+                <KpiCard label="Conformes" value={indOk} icon={CheckCircle2} color="emerald" sub={`sur ${indTotal} applicables`} />
+                <KpiCard label="À corriger" value={indTotal - indOk} icon={AlertTriangle} color="amber" />
+                <KpiCard label="Taux global" value={`${indTotal ? Math.round(indOk / indTotal * 100) : 0}%`} icon={Shield} color="emerald" />
               </div>
               {Object.entries(CRITERES_LABELS).map(([k, clabel]) => {
                 const inds = liveInd.filter(i => i.crit === +k);
-                const okc = inds.filter(i => i.status === 'conforme').length;
+                const appl = inds.filter(i => i.applicable !== false);
+                const okc = appl.filter(i => i.status === 'conforme').length;
                 return (
                   <div key={k} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                     <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                       <p className="text-xs font-extrabold text-slate-900">Critère {k} — {clabel}</p>
-                      <span className="text-[10px] font-bold text-slate-500">{okc}/{inds.length} conformes</span>
+                      <span className="text-[10px] font-bold text-slate-500">{okc}/{appl.length} conformes{inds.length > appl.length ? ` · ${inds.length - appl.length} N/A` : ''}</span>
                     </div>
                     <div className="divide-y divide-slate-50">
                       {inds.map(ind => (
-                        <div key={ind.id} className="px-6 py-3 flex items-start gap-3">
+                        <div key={ind.id} className={cls('px-6 py-3 flex items-start gap-3', ind.applicable === false && 'opacity-60')}>
                           <span className={cls('w-2.5 h-2.5 rounded-full mt-1 shrink-0', IND_STATUS[ind.status].dot)} />
                           <span className="text-[10px] font-bold text-slate-500 w-10 shrink-0">Ind. {ind.id}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-slate-700">{ind.label}</p>
+                            {ind.applicable === false && <p className="text-[10px] text-slate-400 mt-0.5">Non applicable à votre activité — exclu du score</p>}
                             {ind.evidence.map((e, idx) => <p key={idx} className="text-[10px] text-emerald-600 mt-0.5">✓ {e}</p>)}
                             {ind.gaps.map((g, idx) => <p key={idx} className="text-[10px] text-amber-600 mt-0.5">! {g}</p>)}
                           </div>
-                          {ind.auto
-                            ? <span className="text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 shrink-0" title="Statut calculé automatiquement depuis vos données">auto</span>
+                          {ind.applicable === false
+                            ? null
+                            : ind.auto
+                            ? <span className="text-[9px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 shrink-0" title="Statut calculé automatiquement depuis vos données réelles">auto</span>
                             : <button onClick={() => cycleStatus(ind.id)} className="text-[9px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 shrink-0" title="Cliquer pour changer le statut">manuel</button>}
                           <span className={cls('text-[9px] font-bold px-2 py-0.5 rounded border shrink-0 w-16 text-center', IND_STATUS[ind.status].badge)}>
                             {IND_STATUS[ind.status].label}
@@ -1497,7 +1499,7 @@ export default function AppClient() {
           {tab === 'copilote' && (
             <div className="space-y-5">
               <div className="grid grid-cols-3 gap-4">
-                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="emerald" sub={`${indOk}/32 conformes`} />
+                <KpiCard label="Audit-readiness" value={`${readiness}%`} icon={Shield} color="emerald" sub={`${indOk}/${indTotal} conformes`} />
                 <KpiCard label="Écarts à combler" value={gaps.length} icon={AlertTriangle} color={gaps.length ? 'amber' : 'emerald'} />
                 <KpiCard label="Prêt pour l'audit" value={readiness >= 90 ? 'Oui' : 'Bientôt'} icon={CheckCircle2} color={readiness >= 90 ? 'emerald' : 'amber'} />
               </div>
@@ -1719,6 +1721,23 @@ export default function AppClient() {
                 </Row2>
                 <Field label="Adresse" full><input className={inp} value={profile.address} onChange={e => setProfile(p => ({ ...p, address: e.target.value }))} /></Field>
                 <Field label="E-mail de contact" full><input className={inp} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></Field>
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Profil d&apos;activité</p>
+                  <p className="text-[10px] text-slate-400 mb-2 leading-snug">
+                    22 indicateurs relèvent du socle commun. Cochez ce qui vous concerne pour activer les
+                    10 indicateurs conditionnels — les autres seront marqués « non applicables » et exclus de votre score.
+                  </p>
+                  <div className="space-y-1.5">
+                    {PROFILS.map(pf => (
+                      <label key={pf.id} className="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer">
+                        <input type="checkbox" className="accent-emerald-600 w-3.5 h-3.5"
+                          checked={!!profil[pf.id]}
+                          onChange={e => setProfil(p => ({ ...p, [pf.id]: e.target.checked }))} />
+                        {pf.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <button onClick={saveProfile} className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}><Save className="w-3.5 h-3.5" /> Enregistrer</button>
                 {orgMsg && <p className="text-[11px] text-emerald-600 font-semibold">{orgMsg}</p>}
               </div>

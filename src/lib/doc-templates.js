@@ -10,7 +10,7 @@ export const OF = {
 
 export const TEMPLATES = [
   {
-    id: 'convention', indicators: [25], title: 'Convention de formation professionnelle',
+    id: 'convention', indicators: [9], title: 'Convention de formation professionnelle',
     intro: "Entre l'organisme de formation soussigné et le client (l'entreprise ou le bénéficiaire), il est convenu ce qui suit, en application des articles L.6353-1 et suivants du Code du travail.",
     sections: [
       { h: 'Article 1 — Objet et nature de l\'action', body: "La présente convention a pour objet la réalisation d'une action de formation professionnelle entrant dans le champ de l'article L.6313-1 du Code du travail." },
@@ -33,7 +33,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'programme', indicators: [2, 5, 6], title: 'Programme de formation',
+    id: 'programme', indicators: [1, 5, 6], title: 'Programme de formation',
     intro: "Ce programme précise les objectifs, le contenu et les modalités de l'action de formation.",
     sections: [
       { h: 'Objectifs pédagogiques', body: "À l'issue de la formation, le participant sera capable de : ……… (objectifs opérationnels et évaluables)." },
@@ -55,7 +55,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'positionnement', indicators: [8, 27], title: 'Fiche de positionnement et d\'analyse du besoin',
+    id: 'positionnement', indicators: [4, 8], title: 'Fiche de positionnement et d\'analyse du besoin',
     intro: "Cette fiche est renseignée avant l'entrée en formation afin d'adapter la prestation au bénéficiaire.",
     sections: [
       { h: 'Identité du bénéficiaire', body: "Nom / Prénom : {{traineeName}}. Courriel : {{traineeEmail}}. Fonction : ………. Entreprise : ………." },
@@ -65,7 +65,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'satisfaction-chaud', indicators: [13, 29], title: 'Questionnaire de satisfaction à chaud',
+    id: 'satisfaction-chaud', indicators: [30], title: 'Questionnaire de satisfaction à chaud',
     intro: "Merci de donner votre avis à l'issue de la formation (1 = pas du tout satisfait, 5 = très satisfait).",
     sections: [
       { h: 'Organisation et accueil', body: "Qualité de l'organisation et de l'accueil : 1  2  3  4  5" },
@@ -76,7 +76,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'satisfaction-froid', indicators: [14], title: 'Questionnaire d\'évaluation à froid (J+90)',
+    id: 'satisfaction-froid', indicators: [30], title: 'Questionnaire d\'évaluation à froid (J+90)',
     intro: "Environ 3 mois après la formation, merci d'évaluer sa mise en application.",
     sections: [
       { h: 'Mise en application', body: "Avez-vous mis en pratique les acquis de la formation ? Oui / Partiellement / Non. Précisez : ………." },
@@ -85,7 +85,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'attestation-fin', indicators: [10], title: 'Certificat de réalisation',
+    id: 'attestation-fin', indicators: [11], title: 'Certificat de réalisation',
     intro: "L'organisme de formation atteste de la réalisation de l'action de formation ci-dessous.",
     sections: [
       { h: 'Bénéficiaire', body: "Je soussigné(e), représentant de l'organisme, atteste que : Nom / Prénom : {{traineeName}} a suivi l'action de formation suivante." },
@@ -95,7 +95,7 @@ export const TEMPLATES = [
     signature: true,
   },
   {
-    id: 'procedure-reclamation', indicators: [30], title: 'Procédure de traitement des réclamations',
+    id: 'procedure-reclamation', indicators: [31], title: 'Procédure de traitement des réclamations',
     intro: "Cette procédure décrit les modalités de recueil et de traitement des réclamations des parties prenantes.",
     sections: [
       { h: 'Objet', body: "Garantir le traitement de toute réclamation d'un bénéficiaire, financeur ou partenaire dans une démarche d'amélioration continue." },
@@ -105,7 +105,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'fiche-non-conformite', indicators: [31], title: 'Fiche de non-conformité et action corrective',
+    id: 'fiche-non-conformite', indicators: [31, 32], title: 'Fiche de non-conformité et action corrective',
     intro: "Cette fiche formalise le traitement d'une non-conformité identifiée.",
     sections: [
       { h: 'Description de la non-conformité', body: "Date : ……/……/………. Origine (audit, réclamation, constat interne) : ………. Description : ………." },
@@ -115,7 +115,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'sous-traitance', indicators: [22], title: 'Contrat-cadre de sous-traitance pédagogique',
+    id: 'sous-traitance', indicators: [27], title: 'Contrat-cadre de sous-traitance pédagogique',
     intro: "Entre l'organisme donneur d'ordre et l'intervenant sous-traitant, il est convenu ce qui suit.",
     sections: [
       { h: 'Objet', body: "Le sous-traitant réalise, pour le compte de l'organisme, tout ou partie d'actions de formation confiées ponctuellement." },
@@ -126,7 +126,7 @@ export const TEMPLATES = [
     signature: true,
   },
   {
-    id: 'referent-handicap', indicators: [4], title: 'Fiche référent handicap et procédure d\'accessibilité',
+    id: 'referent-handicap', indicators: [26], title: 'Fiche référent handicap et procédure d\'accessibilité',
     intro: "Cette fiche formalise l'organisation de l'organisme pour l'accueil des personnes en situation de handicap.",
     sections: [
       { h: 'Référent handicap', body: "Nom du référent : ………. Coordonnées (e-mail / téléphone) : ………." },
@@ -136,7 +136,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'info-publique', indicators: [1, 3], title: 'Fiche d\'information publique (mentions catalogue)',
+    id: 'info-publique', indicators: [1, 2], title: 'Fiche d\'information publique (mentions catalogue)',
     intro: "Informations rendues publiques pour chaque action de formation (site web, catalogue, devis).",
     sections: [
       { h: 'Intitulé, objectifs et résultats', body: "Intitulé : ………. Objectifs : ………. Résultats / indicateurs communiqués : ………." },
@@ -146,7 +146,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'fiche-formateur', indicators: [7, 18], title: 'Fiche de qualification du formateur',
+    id: 'fiche-formateur', indicators: [21], title: 'Fiche de qualification du formateur',
     intro: "Cette fiche justifie la qualification et les compétences du formateur intervenant.",
     sections: [
       { h: 'Identité et domaine', body: "Nom / Prénom : {{trainer}}. Domaine d'expertise : ………." },
@@ -156,7 +156,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'plan-competences', indicators: [19], title: 'Plan de développement des compétences des personnels',
+    id: 'plan-competences', indicators: [22], title: 'Plan de développement des compétences des personnels',
     intro: "Suivi de l'entretien et du développement des compétences de l'équipe pédagogique et administrative.",
     sections: [
       { h: 'Personnel concerné', body: "Nom : ………. Fonction : ………." },
@@ -165,7 +165,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'fiche-moyens', indicators: [20], title: 'Fiche des moyens techniques et pédagogiques',
+    id: 'fiche-moyens', indicators: [17, 19], title: 'Fiche des moyens techniques et pédagogiques',
     intro: "Description des moyens techniques et pédagogiques mis à disposition des apprenants.",
     sections: [
       { h: 'Moyens techniques', body: "Matériel, plateforme LMS, équipements, outils utilisés : ………." },
@@ -174,7 +174,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'attestation-locaux', indicators: [21], title: 'Fiche des locaux et accessibilité',
+    id: 'attestation-locaux', indicators: [17], title: 'Fiche des locaux et accessibilité',
     intro: "Description des locaux de formation et de leur accessibilité.",
     sections: [
       { h: 'Locaux', body: "Adresse : {{ofAddress}}. Capacité d'accueil : ………. Équipements des salles : ………." },
@@ -183,7 +183,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'procedure-veille', indicators: [23, 24], title: 'Procédure et journal de veille',
+    id: 'procedure-veille', indicators: [23, 24, 25], title: 'Procédure et journal de veille',
     intro: "Organisation de la veille légale, réglementaire, métiers et innovations pédagogiques.",
     sections: [
       { h: 'Objet et sources', body: "Sources suivies (Journal officiel, OPCO, presse spécialisée, réseaux professionnels) : ………." },
@@ -193,7 +193,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'fiche-liaison', indicators: [26, 28], title: 'Fiche de liaison financeur / prescripteur',
+    id: 'fiche-liaison', indicators: [4, 18], title: 'Fiche de liaison financeur / prescripteur',
     intro: "Recueil des besoins et communication avec le financeur ou le prescripteur.",
     sections: [
       { h: 'Financeur / prescripteur', body: "Nom de la structure : ………. Interlocuteur : ………. Contact : ………." },
@@ -202,7 +202,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'bilan-evaluations', indicators: [15, 16], title: 'Bilan et exploitation des évaluations',
+    id: 'bilan-evaluations', indicators: [2, 11], title: 'Bilan et exploitation des évaluations',
     intro: "Synthèse et exploitation des évaluations pour la session {{sessionTitle}}.",
     sections: [
       { h: 'Résultats de satisfaction', body: "Taux de satisfaction moyen : ………. À chaud / à froid : ………." },
@@ -212,7 +212,7 @@ export const TEMPLATES = [
     ],
   },
   {
-    id: 'fiche-suivi', indicators: [11, 17], title: 'Fiche de suivi individualisé',
+    id: 'fiche-suivi', indicators: [10, 12], title: 'Fiche de suivi individualisé',
     intro: "Suivi de l'accompagnement du bénéficiaire {{traineeName}} pour la session {{sessionTitle}}.",
     sections: [
       { h: 'Objectifs individuels', body: "Objectifs fixés avec le bénéficiaire : ………." },

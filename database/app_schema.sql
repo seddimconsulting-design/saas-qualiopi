@@ -228,6 +228,13 @@ CREATE TABLE IF NOT EXISTS session_trainees (
     PRIMARY KEY (session_id, trainee_id)
 );
 
+-- ─── Profil d'activité de l'organisme (indicateurs Qualiopi applicables) ───
+-- 22 indicateurs relèvent du socle commun ; 10 sont conditionnels.
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS certifiant BOOLEAN DEFAULT FALSE;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS apprentissage BOOLEAN DEFAULT FALSE;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS sous_traitance BOOLEAN DEFAULT FALSE;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS afest BOOLEAN DEFAULT FALSE;
+
 -- ─── Abonnement / facturation (Stripe) ───
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'essai';
 ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT;

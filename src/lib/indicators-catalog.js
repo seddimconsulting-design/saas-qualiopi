@@ -1,40 +1,139 @@
-/* Base de connaissance serveur des 32 indicateurs Qualiopi (RNQ v9).
-   Pour chaque indicateur : libellé court, mots-clés (repli déterministe),
-   et « attendu » officiel synthétisé (grounding du moteur IA).
-   A valider contre l'arrêté officiel du Référentiel National Qualité V9. */
+/* Référentiel National Qualité (RNQ) — Qualiopi.
+   Source : arrêté du 6 juin 2019 modifié et Guide de lecture du ministère du Travail.
+   32 indicateurs répartis en 7 critères : 22 relèvent du socle commun,
+   10 sont conditionnels (certification, apprentissage/CFA, sous-traitance, AFEST).
+
+   `requires` : null = socle commun (toujours applicable) ;
+   sinon liste de profils d'activité dont AU MOINS UN doit être actif. */
+
+export const CRITERES = {
+  1: "Information du public",
+  2: "Identification des objectifs et adaptation des prestations",
+  3: "Accueil, suivi et évaluation des bénéficiaires",
+  4: "Moyens pédagogiques, techniques et d'encadrement",
+  5: "Qualification et développement des connaissances du personnel",
+  6: "Inscription dans son environnement professionnel",
+  7: "Recueil et prise en compte des appréciations et réclamations",
+};
+
+/* Profils d'activité de l'organisme (déterminent les indicateurs applicables). */
+export const PROFILS = [
+  { id: 'certifiant', label: 'Formations certifiantes (RNCP/RS)' },
+  { id: 'apprentissage', label: 'Apprentissage / alternance (CFA)' },
+  { id: 'sousTraitance', label: 'Recours à la sous-traitance / portage salarial' },
+  { id: 'afest', label: 'Formation en situation de travail (AFEST)' },
+];
+
 export const INDICATEURS_CATALOG = [
-  { id: 1, label: "Information publics sur objectifs & résultats", attendu: "Diffuser une information accessible, détaillée et vérifiable sur les prestations (objectifs, résultats).", kw: ["catalogue", "information du public", "objectifs de la formation"] },
-  { id: 2, label: "Identification des prérequis & profils", attendu: "Communiquer les prérequis, publics visés et objectifs de chaque prestation.", kw: ["prérequis", "public visé", "profil"] },
-  { id: 3, label: "Délais et modalités d'accès", attendu: "Indiquer les délais et modalités d'accès aux prestations.", kw: ["délai d'accès", "modalités d'accès", "inscription"] },
-  { id: 4, label: "Accessibilité handicap", attendu: "Garantir l'accessibilité des personnes en situation de handicap (référent, adaptations, réseau).", kw: ["handicap", "accessibilit", "psh", "agefiph", "aménagement", "référent handicap"] },
-  { id: 5, label: "Contenu et objectifs pédagogiques", attendu: "Définir des objectifs et contenus pédagogiques adaptés et évaluables.", kw: ["objectifs pédagogiques", "programme de formation", "contenu pédagogique"] },
-  { id: 6, label: "Adaptation des modalités pédagogiques", attendu: "Adapter les modalités et méthodes pédagogiques aux publics et aux objectifs.", kw: ["modalités pédagogiques", "méthodes pédagogiques", "moyens pédagogiques"] },
-  { id: 7, label: "Adéquation ressources humaines", attendu: "Mobiliser des ressources humaines qualifiées et en nombre suffisant.", kw: ["intervenant", "équipe pédagogique", "moyens humains"] },
-  { id: 8, label: "Positionnement à l'entrée", attendu: "Réaliser un positionnement et une évaluation à l'entrée de la prestation.", kw: ["positionnement", "test d'entrée", "évaluation amont", "diagnostic initial"] },
-  { id: 9, label: "Évaluation des acquis en cours", attendu: "Évaluer l'atteinte des acquis en cours de prestation.", kw: ["évaluation en cours", "quiz", "exercice", "acquis intermédiaires"] },
-  { id: 10, label: "Évaluation des acquis en fin", attendu: "Évaluer et attester les acquis en fin de prestation.", kw: ["certificat de réalisation", "évaluation finale", "attestation de fin", "acquis en fin"] },
-  { id: 11, label: "Accompagnement des apprenants", attendu: "Assurer l'accompagnement et le suivi individualisé des bénéficiaires.", kw: ["accompagnement", "suivi individualisé", "tutorat"] },
-  { id: 12, label: "Suivi de l'assiduité (émargement)", attendu: "Assurer et tracer le suivi de l'assiduité et de l'engagement des bénéficiaires (émargement).", kw: ["émargement", "feuille de présence", "assiduité", "feuille d'émargement"] },
-  { id: 13, label: "Satisfaction à chaud", attendu: "Recueillir la satisfaction des bénéficiaires à chaud.", kw: ["satisfaction à chaud", "questionnaire de satisfaction", "évaluation à chaud"] },
-  { id: 14, label: "Satisfaction à froid", attendu: "Recueillir la satisfaction et l'impact à froid (post-formation).", kw: ["à froid", "j+90", "satisfaction à froid", "impact"] },
-  { id: 15, label: "Exploitation des résultats satisfaction", attendu: "Exploiter les résultats des évaluations pour améliorer les prestations.", kw: ["analyse des évaluations", "synthèse satisfaction", "exploitation"] },
-  { id: 16, label: "Indicateurs de résultats communiqués", attendu: "Communiquer des indicateurs de résultats (réussite, satisfaction).", kw: ["taux de réussite", "taux de satisfaction", "indicateurs de résultats"] },
-  { id: 17, label: "Coordination des acteurs", attendu: "Coordonner les acteurs internes et externes intervenant sur la prestation.", kw: ["coordination", "réunion pédagogique", "acteurs internes"] },
-  { id: 18, label: "Qualification des formateurs", attendu: "Justifier la qualification et les compétences des formateurs (CV, diplômes).", kw: ["cv", "curriculum", "diplôme", "qualification", "formateur"] },
-  { id: 19, label: "Développement des compétences formateurs", attendu: "Entretenir et développer les compétences des personnels.", kw: ["formation des formateurs", "développement des compétences", "plan de formation interne"] },
-  { id: 20, label: "Moyens techniques et pédagogiques adaptés", attendu: "Mettre à disposition des moyens techniques et pédagogiques adaptés.", kw: ["moyens techniques", "matériel", "plateforme lms"] },
-  { id: 21, label: "Locaux accessibles et adaptés", attendu: "Disposer de locaux et équipements accessibles et adaptés.", kw: ["locaux", "salle de formation", "erp"] },
-  { id: 22, label: "Gestion des sous-traitants", attendu: "Encadrer la sous-traitance et le portage (contrats, respect des exigences).", kw: ["sous-traitance", "sous-traitant", "contrat-cadre", "prestataire externe"] },
-  { id: 23, label: "Veilles réglementaires et sectorielles", attendu: "Réaliser une veille légale et réglementaire et l'appliquer.", kw: ["veille", "décret", "réglementaire", "journal officiel", "actualité légale"] },
-  { id: 24, label: "Traçabilité des veilles", attendu: "Réaliser une veille sur les évolutions (compétences, métiers, innovations) et la tracer.", kw: ["journal de veille", "traçabilité de la veille", "exploitation de la veille"] },
-  { id: 25, label: "Traçabilité des actions de formation", attendu: "Assurer la traçabilité et la conservation des documents de la prestation.", kw: ["convention de formation", "contrat de formation", "dossier de session", "traçabilité"] },
-  { id: 26, label: "Communication avec financeurs/prescripteurs", attendu: "Mobiliser et communiquer avec les financeurs et prescripteurs.", kw: ["opco", "financeur", "prescripteur", "compte rendu"] },
-  { id: 27, label: "Recueil besoins prescripteurs/financeurs", attendu: "Recueillir et prendre en compte les besoins des prescripteurs et financeurs.", kw: ["analyse du besoin", "recueil du besoin", "cahier des charges"] },
-  { id: 28, label: "Mise en relation prescripteurs/apprenants", attendu: "Assurer la mise en relation et l'orientation des bénéficiaires.", kw: ["mise en relation", "orientation", "partenariat"] },
-  { id: 29, label: "Mesure de la satisfaction parties prenantes", attendu: "Mesurer la satisfaction des parties prenantes (stagiaires, financeurs, entreprises).", kw: ["enquête", "parties prenantes", "satisfaction globale"] },
-  { id: 30, label: "Traitement des réclamations", attendu: "Recueillir et traiter les réclamations, difficultés et aléas.", kw: ["réclamation", "plainte", "insatisfaction", "litige"] },
-  { id: 31, label: "Gestion des non-conformités", attendu: "Mettre en œuvre des mesures de traitement des non-conformités.", kw: ["non-conformité", "non conformité", "action corrective", "fiche d'incident"] },
-  { id: 32, label: "Amélioration continue", attendu: "Déployer une démarche d'amélioration continue.", kw: ["amélioration continue", "plan d'amélioration", "action préventive", "pac"] },
+  // ── Critère 1 — Information du public ──
+  { id: 1, crit: 1, requires: null, label: "Information accessible, détaillée et vérifiable sur les prestations",
+    attendu: "Diffuser une information publique complète : prérequis, objectifs, durée, modalités, délais d'accès, tarifs, contacts, accessibilité.",
+    kw: ["catalogue", "information du public", "fiche formation", "prérequis", "délai d'accès", "tarif"] },
+  { id: 2, crit: 1, requires: null, label: "Diffusion d'indicateurs de résultats",
+    attendu: "Publier des indicateurs de résultats adaptés aux prestations et aux publics (satisfaction, réussite, assiduité).",
+    kw: ["taux de réussite", "taux de satisfaction", "indicateurs de résultats", "statistiques"] },
+  { id: 3, crit: 1, requires: ['certifiant', 'apprentissage'], label: "Taux d'obtention, passerelles, suites de parcours et débouchés",
+    attendu: "Informer sur les taux d'obtention de la certification, blocs de compétences, équivalences, passerelles et débouchés.",
+    kw: ["taux d'obtention", "bloc de compétences", "passerelle", "équivalence", "débouché", "rncp"] },
+
+  // ── Critère 2 — Objectifs et adaptation ──
+  { id: 4, crit: 2, requires: null, label: "Analyse du besoin du bénéficiaire",
+    attendu: "Analyser le besoin du bénéficiaire en lien avec l'entreprise et/ou le financeur avant l'entrée en formation.",
+    kw: ["analyse du besoin", "recueil du besoin", "cahier des charges", "entretien préalable", "expression du besoin"] },
+  { id: 5, crit: 2, requires: null, label: "Objectifs opérationnels et évaluables",
+    attendu: "Définir des objectifs pédagogiques opérationnels, précis et évaluables pour chaque prestation.",
+    kw: ["objectifs pédagogiques", "objectifs opérationnels", "compétences visées"] },
+  { id: 6, crit: 2, requires: null, label: "Contenus et modalités adaptés aux objectifs et aux publics",
+    attendu: "Adapter contenus, durées, modalités et méthodes pédagogiques aux objectifs et aux publics visés.",
+    kw: ["programme de formation", "contenu pédagogique", "modalités pédagogiques", "méthodes pédagogiques", "déroulé"] },
+  { id: 7, crit: 2, requires: ['certifiant', 'apprentissage'], label: "Adéquation des contenus aux exigences de la certification",
+    attendu: "Vérifier l'adéquation du contenu de la formation au référentiel de la certification visée.",
+    kw: ["référentiel de certification", "adéquation", "bloc de compétences", "exigences de la certification"] },
+  { id: 8, crit: 2, requires: null, label: "Positionnement et évaluation des acquis à l'entrée",
+    attendu: "Formaliser les procédures de positionnement et d'évaluation des acquis à l'entrée de la prestation.",
+    kw: ["positionnement", "test d'entrée", "évaluation amont", "diagnostic initial", "prérequis vérifiés"] },
+
+  // ── Critère 3 — Accueil, suivi et évaluation ──
+  { id: 9, crit: 3, requires: null, label: "Information sur les conditions de déroulement",
+    attendu: "Informer les bénéficiaires des conditions de déroulement : lieux, horaires, règlement intérieur, contacts, modalités d'évaluation.",
+    kw: ["convocation", "règlement intérieur", "livret d'accueil", "conditions de déroulement", "convention"] },
+  { id: 10, crit: 3, requires: null, label: "Mise en œuvre et adaptation de la prestation et du suivi",
+    attendu: "Mettre en œuvre et adapter la prestation, l'accompagnement et le suivi aux publics bénéficiaires.",
+    kw: ["adaptation", "accompagnement", "suivi individualisé", "aménagement du parcours"] },
+  { id: 11, crit: 3, requires: null, label: "Évaluation de l'atteinte des objectifs",
+    attendu: "Évaluer l'atteinte des objectifs par les bénéficiaires (en cours et en fin de prestation) et en conserver la trace.",
+    kw: ["évaluation des acquis", "évaluation finale", "certificat de réalisation", "attestation de fin", "quiz", "test"] },
+  { id: 12, crit: 3, requires: null, label: "Engagement des bénéficiaires et prévention des ruptures",
+    attendu: "Mettre en œuvre des mesures favorisant l'engagement (assiduité, émargement, relances) et prévenant les abandons.",
+    kw: ["émargement", "feuille de présence", "assiduité", "engagement", "abandon", "rupture de parcours"] },
+  { id: 13, crit: 3, requires: ['apprentissage'], label: "Coordination et progressivité entre centre et entreprise",
+    attendu: "Assurer la coordination et la progressivité des apprentissages entre le centre de formation et l'entreprise.",
+    kw: ["livret d'apprentissage", "maître d'apprentissage", "tuteur", "coordination entreprise"] },
+  { id: 14, crit: 3, requires: ['apprentissage'], label: "Accompagnement socio-professionnel et citoyenneté",
+    attendu: "Assurer un accompagnement socio-professionnel, éducatif et relatif à l'exercice de la citoyenneté.",
+    kw: ["accompagnement socio-professionnel", "citoyenneté", "médiateur", "vie scolaire"] },
+  { id: 15, crit: 3, requires: ['apprentissage'], label: "Information des apprentis sur droits, devoirs et santé-sécurité",
+    attendu: "Informer les apprentis de leurs droits et devoirs ainsi que des règles de santé et sécurité.",
+    kw: ["droits et devoirs", "santé sécurité", "règlement apprenti", "sécurité au travail"] },
+  { id: 16, crit: 3, requires: ['certifiant', 'apprentissage'], label: "Respect des exigences de l'autorité de certification",
+    attendu: "Respecter les exigences formelles de l'autorité de certification pour la présentation des candidats.",
+    kw: ["autorité de certification", "présentation des candidats", "jury", "inscription à l'examen"] },
+
+  // ── Critère 4 — Moyens ──
+  { id: 17, crit: 4, requires: null, label: "Moyens humains, techniques et environnement approprié",
+    attendu: "Mettre à disposition des moyens humains et techniques adaptés et un environnement approprié (locaux, équipements).",
+    kw: ["moyens techniques", "locaux", "salle de formation", "matériel", "plateforme", "moyens humains"] },
+  { id: 18, crit: 4, requires: null, label: "Mobilisation et coordination des intervenants",
+    attendu: "Mobiliser et coordonner les intervenants internes et externes concourant à la prestation.",
+    kw: ["coordination", "réunion pédagogique", "intervenants", "équipe pédagogique"] },
+  { id: 19, crit: 4, requires: null, label: "Ressources pédagogiques et appropriation par les bénéficiaires",
+    attendu: "Mettre à disposition des ressources pédagogiques et s'assurer de leur appropriation par les bénéficiaires.",
+    kw: ["support de cours", "ressources pédagogiques", "supports remis", "documentation"] },
+  { id: 20, crit: 4, requires: ['apprentissage'], label: "Personnel dédié (mobilité, référent handicap, conseil de perfectionnement)",
+    attendu: "Disposer d'un personnel dédié à la mobilité, d'un référent handicap et d'un conseil de perfectionnement.",
+    kw: ["conseil de perfectionnement", "référent mobilité", "référent handicap", "personnel dédié"] },
+
+  // ── Critère 5 — Personnel ──
+  { id: 21, crit: 5, requires: null, label: "Compétences des intervenants déterminées, mobilisées et évaluées",
+    attendu: "Déterminer, mobiliser et évaluer les compétences des intervenants (CV, diplômes, expérience, évaluation).",
+    kw: ["cv", "curriculum", "diplôme", "qualification", "formateur", "compétences intervenants"] },
+  { id: 22, crit: 5, requires: null, label: "Entretien et développement des compétences des salariés",
+    attendu: "Entretenir et développer les compétences des personnels (plan de développement, formations suivies).",
+    kw: ["plan de développement des compétences", "formation des formateurs", "entretien professionnel"] },
+
+  // ── Critère 6 — Environnement professionnel ──
+  { id: 23, crit: 6, requires: null, label: "Veille légale et réglementaire",
+    attendu: "Réaliser une veille légale et réglementaire sur la formation professionnelle et en exploiter les enseignements.",
+    kw: ["veille légale", "veille réglementaire", "décret", "journal officiel", "loi", "réglementation"] },
+  { id: 24, crit: 6, requires: null, label: "Veille sur les compétences, métiers et emplois",
+    attendu: "Réaliser une veille sur les évolutions des compétences, des métiers et des emplois de ses secteurs.",
+    kw: ["veille métier", "évolution des métiers", "emploi", "branche professionnelle", "compétences du secteur"] },
+  { id: 25, crit: 6, requires: null, label: "Veille sur les innovations pédagogiques et technologiques",
+    attendu: "Réaliser une veille sur les innovations pédagogiques et technologiques et faire évoluer ses prestations.",
+    kw: ["innovation pédagogique", "veille technologique", "nouvelle méthode", "outil numérique", "digital learning"] },
+  { id: 26, crit: 6, requires: null, label: "Accueil des publics en situation de handicap",
+    attendu: "Mobiliser expertises, outils et réseaux pour accueillir les personnes en situation de handicap (référent, adaptations, partenaires).",
+    kw: ["handicap", "accessibilité", "psh", "agefiph", "aménagement", "référent handicap", "compensation"] },
+  { id: 27, crit: 6, requires: ['sousTraitance'], label: "Conformité des sous-traitants et salariés portés",
+    attendu: "Vérifier le respect des exigences du référentiel par les sous-traitants ou salariés portés (contrats, contrôle).",
+    kw: ["sous-traitance", "sous-traitant", "contrat-cadre", "portage salarial", "prestataire externe"] },
+  { id: 28, crit: 6, requires: ['afest'], label: "Réseau de partenaires et accueil en entreprise (AFEST)",
+    attendu: "Mobiliser un réseau de partenaires pour co-construire l'ingénierie et favoriser l'accueil en entreprise.",
+    kw: ["afest", "situation de travail", "partenaires", "co-construction", "tuteur entreprise"] },
+  { id: 29, crit: 6, requires: ['apprentissage'], label: "Actions d'insertion professionnelle et poursuite d'études",
+    attendu: "Développer des actions concourant à l'insertion professionnelle ou à la poursuite d'études.",
+    kw: ["insertion professionnelle", "poursuite d'études", "placement", "forum emploi"] },
+
+  // ── Critère 7 — Appréciations et amélioration ──
+  { id: 30, crit: 7, requires: null, label: "Recueil des appréciations des parties prenantes",
+    attendu: "Recueillir les appréciations des bénéficiaires, financeurs, entreprises et équipes (satisfaction à chaud et à froid).",
+    kw: ["satisfaction", "questionnaire", "enquête", "appréciation", "évaluation à chaud", "à froid", "parties prenantes"] },
+  { id: 31, crit: 7, requires: null, label: "Traitement des difficultés, réclamations et aléas",
+    attendu: "Mettre en œuvre des modalités de traitement des difficultés rencontrées, des réclamations et des aléas.",
+    kw: ["réclamation", "plainte", "litige", "aléa", "incident", "non-conformité", "action corrective"] },
+  { id: 32, crit: 7, requires: null, label: "Mesures d'amélioration continue",
+    attendu: "Mettre en œuvre des mesures d'amélioration à partir de l'analyse des appréciations et réclamations.",
+    kw: ["amélioration continue", "plan d'amélioration", "action préventive", "pac", "bilan qualité"] },
 ];
 
 /* Attendu d'un indicateur par id. */
@@ -43,3 +142,13 @@ export const attenduOf = (id) => INDICATEURS_CATALOG.find(i => i.id === id)?.att
 /* Référentiel injecté dans le prompt IA (grounding). */
 export const catalogForPrompt = () =>
   INDICATEURS_CATALOG.map(i => `${i.id}. ${i.label} — attendu : ${i.attendu}`).join("\n");
+
+/* Un indicateur s'applique-t-il au profil d'activité de l'organisme ? */
+export function isApplicable(indicator, profil = {}) {
+  if (!indicator.requires) return true;
+  return indicator.requires.some(flag => !!profil[flag]);
+}
+
+/* Liste des indicateurs applicables à un profil donné. */
+export const applicableIndicators = (profil = {}) =>
+  INDICATEURS_CATALOG.filter(i => isApplicable(i, profil));
