@@ -658,9 +658,9 @@ export default function AppClient() {
 
       {/* ── Sidebar (tiroir coulissant sur mobile, fixe sur ordinateur) ── */}
       <aside className={cls(
-        'w-56 bg-white border-r border-slate-100 flex flex-col justify-between shrink-0 shadow-sm',
-        'fixed inset-y-0 left-0 z-40 transition-transform duration-200 md:static md:translate-x-0',
-        navOpen ? 'translate-x-0' : '-translate-x-full'
+        'w-56 bg-white border-r border-slate-100 flex-col justify-between shrink-0 shadow-sm',
+        'fixed inset-y-0 left-0 z-40 md:static',
+        navOpen ? 'flex' : 'hidden md:flex'
       )}>
         <div>
           {/* Logo */}
