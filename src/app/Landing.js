@@ -32,6 +32,7 @@ function Nav() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <a href="/tarifs" className="text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2">Tarifs</a>
           <a href="/login" className="text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2">Se connecter</a>
           <a href="/login?mode=signup" className="text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition">
             Essai gratuit
@@ -188,6 +189,7 @@ function Footer() {
           <span className="text-xs text-slate-400">— Pilotage Qualiopi</span>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
+          <a href="/tarifs" className="hover:text-slate-700 font-medium">Tarifs</a>
           <a href="/legal/mentions-legales" className="hover:text-slate-700 font-medium">Mentions légales</a>
           <a href="/legal/confidentialite" className="hover:text-slate-700 font-medium">Confidentialité</a>
           <a href="/legal/cgu" className="hover:text-slate-700 font-medium">CGU</a>

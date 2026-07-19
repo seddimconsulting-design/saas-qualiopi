@@ -30,6 +30,19 @@ export function sendTraineeAccessEmail(to, traineeName, ofName, link) {
   });
 }
 
+export function sendColdSurveyEmail(to, traineeName, ofName, link) {
+  return send({
+    to,
+    subject: `Votre avis, 3 mois après votre formation${ofName ? ` — ${ofName}` : ''}`,
+    html: wrap(`
+      <p>Bonjour ${esc(traineeName || '')},</p>
+      <p>Vous avez suivi une formation avec ${esc(ofName || 'notre organisme')} il y a environ 3 mois.
+      Afin de mesurer les bénéfices dans la durée, merci de répondre à une courte évaluation « à froid » depuis votre espace :</p>
+      <p><a href="${link}" style="color:#059669;font-weight:bold">Répondre à l'évaluation à froid</a></p>
+      <p style="color:#777;font-size:12px">Ce lien vous est personnel, ne le partagez pas.</p>`),
+  });
+}
+
 export function sendFeedbackEmail({ from, ofName, message }) {
   const to = process.env.FEEDBACK_TO || 'contact@certivia.app';
   return send({

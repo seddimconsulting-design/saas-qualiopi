@@ -265,6 +265,7 @@ export default function AppClient() {
   const [satResponses, setSatResponses] = useState([]);
   const [positionings, setPositionings] = useState([]);
   const [quizDraft, setQuizDraft] = useState(null); // null = pas en édition ; sinon tableau de questions
+  const [billing, setBilling] = useState(null);
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -303,6 +304,7 @@ export default function AppClient() {
       if (d) { setTeam(d.users || []); setMyRole(d.myRole); setMyUserId(d.me); }
     }).catch(() => {});
     fetch('/api/satisfaction').then(r => r.ok ? r.json() : null).then(d => { if (d) setSatResponses(d.responses || []); }).catch(() => {});
+    fetch('/api/billing/status').then(r => r.ok ? r.json() : null).then(d => { if (d) setBilling(d); }).catch(() => {});
     try { if (localStorage.getItem('certivia_onboarding_hidden') === '1') setOnbHidden(true); } catch {}
   }, []);
 
@@ -321,6 +323,11 @@ export default function AppClient() {
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
+  };
+  const openBillingPortal = async () => {
+    const r = await fetch('/api/billing/portal', { method: 'POST' }).then(x => x.json()).catch(() => null);
+    if (r && r.url) window.location.href = r.url;
+    else setOrgMsg((r && r.error) || 'Impossible d’ouvrir le portail de facturation.');
   };
   const resendVerification = async () => {
     setVerifState('sending');
@@ -1735,6 +1742,32 @@ export default function AppClient() {
                   </div>
                 ) : <p className="text-[11px] text-slate-400">Seul le propriétaire peut ajouter des utilisateurs.</p>}
                 {orgMsg && <p className="text-[11px] text-red-600 font-semibold">{orgMsg}</p>}
+              </div>
+
+              {/* Abonnement */}
+              <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-3">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900">Abonnement</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Votre offre, vos factures et la gestion de l&apos;abonnement.</p>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-xl border bg-emerald-50 text-emerald-700 border-emerald-200">
+                    Offre : {billing?.plan === 'pro' ? 'Pro' : billing?.plan === 'essentiel' ? 'Essentiel' : 'Essai gratuit'}
+                  </span>
+                  {billing?.status && <span className="text-[10px] text-slate-500">Statut : {billing.status}</span>}
+                  {billing?.currentPeriodEnd && (
+                    <span className="text-[10px] text-slate-400">Prochaine échéance : {new Date(billing.currentPeriodEnd).toLocaleDateString('fr-FR')}</span>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <a href="/tarifs" className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}>Voir les offres</a>
+                  {billing?.hasCustomer && (
+                    <button onClick={openBillingPortal} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>Gérer mon abonnement</button>
+                  )}
+                </div>
+                {billing && !billing.enabled && (
+                  <p className="text-[10px] text-amber-600">Facturation non encore activée (clés Stripe à configurer).</p>
+                )}
               </div>
             </div>
           )}

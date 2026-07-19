@@ -359,6 +359,20 @@ export default function PortailPage() {
                       );
                     })}
                   </div>
+
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-5 mb-2">Mes documents</p>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`/api/portal/document?token=${encodeURIComponent(token)}&sessionId=${s.id}&tpl=attestation-fin&format=pdf`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700">
+                      Certificat de réalisation (PDF)
+                    </a>
+                    <a href={`/api/portal/document?token=${encodeURIComponent(token)}&sessionId=${s.id}&tpl=programme&format=pdf`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:border-emerald-300 hover:text-emerald-700">
+                      Programme (PDF)
+                    </a>
+                  </div>
                 </div>
                 );
               })}

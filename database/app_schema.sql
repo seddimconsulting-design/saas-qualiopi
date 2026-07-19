@@ -228,6 +228,16 @@ CREATE TABLE IF NOT EXISTS session_trainees (
     PRIMARY KEY (session_id, trainee_id)
 );
 
+-- ─── Abonnement / facturation (Stripe) ───
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'essai';
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+ALTER TABLE app_tenants ADD COLUMN IF NOT EXISTS trial_end TIMESTAMPTZ;
+
+-- Suivi de la relance "satisfaction à froid" (J+90) par inscription.
+ALTER TABLE session_trainees ADD COLUMN IF NOT EXISTS cold_invited_at TIMESTAMPTZ;
+
 -- Jeton d'accès stagiaire (lien magique, un actif par stagiaire).
 CREATE TABLE IF NOT EXISTS trainee_tokens (
     token_hash TEXT PRIMARY KEY,

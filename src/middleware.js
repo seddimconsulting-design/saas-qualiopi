@@ -18,6 +18,8 @@ export async function middleware(req) {
   // Routes d'auth + page de réinitialisation + portail stagiaire : toujours ouvertes
   if (pathname.startsWith('/api/auth')) return NextResponse.next();
   if (pathname.startsWith('/api/portal')) return NextResponse.next();
+  if (pathname.startsWith('/api/cron')) return NextResponse.next();
+  if (pathname === '/api/billing/webhook') return NextResponse.next();
   if (pathname === '/reset') return NextResponse.next();
 
   // Autres API : authentification requise
