@@ -7,7 +7,7 @@ import {
   Save, ChevronRight, TrendingUp, BarChart3, Euro, Calendar,
   Clock, Star, Building2, CreditCard, ClipboardList, Bell,
   BookOpen, Shield, Award, X, Filter, Search, Download,
-  ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut, Settings
+  ArrowUpRight, ArrowDownRight, Minus, Upload, LogOut, Settings, Menu
 } from 'lucide-react';
 import { TEMPLATES } from '@/lib/doc-templates';
 
@@ -266,6 +266,7 @@ export default function AppClient() {
   const [positionings, setPositionings] = useState([]);
   const [quizDraft, setQuizDraft] = useState(null); // null = pas en édition ; sinon tableau de questions
   const [billing, setBilling] = useState(null);
+  const [navOpen, setNavOpen] = useState(false); // menu latéral mobile
   const [profile, setProfile] = useState({ name: '', nda: '', address: '', email: '', phone: '', logo: '' });
   const [team, setTeam] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -631,12 +632,12 @@ export default function AppClient() {
   const Modal = ({ title, onSave, children }) => (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-slate-100">
           <h3 className="font-extrabold text-sm text-slate-900">{title}</h3>
           <button onClick={closeModal} className="p-1.5 hover:bg-slate-100 rounded-lg"><X className="w-4 h-4 text-slate-500" /></button>
         </div>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">{children}</div>
-        <div className="flex gap-2 px-6 py-4 border-t border-slate-100">
+        <div className="flex gap-2 px-4 md:px-6 py-4 border-t border-slate-100">
           <button onClick={onSave} className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}><Save className="w-3.5 h-3.5" /> Enregistrer</button>
           <button onClick={closeModal} className={cls(btn, 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>Annuler</button>
         </div>
@@ -652,8 +653,15 @@ export default function AppClient() {
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
 
-      {/* ── Sidebar ── */}
-      <aside className="w-56 bg-white border-r border-slate-100 flex flex-col justify-between shrink-0 shadow-sm">
+      {/* Fond assombri quand le menu mobile est ouvert */}
+      {navOpen && <div onClick={() => setNavOpen(false)} className="fixed inset-0 bg-black/40 z-30 md:hidden" />}
+
+      {/* ── Sidebar (tiroir coulissant sur mobile, fixe sur ordinateur) ── */}
+      <aside className={cls(
+        'w-56 bg-white border-r border-slate-100 flex flex-col justify-between shrink-0 shadow-sm',
+        'fixed inset-y-0 left-0 z-40 transition-transform duration-200 md:static md:translate-x-0',
+        navOpen ? 'translate-x-0' : '-translate-x-full'
+      )}>
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
@@ -680,7 +688,7 @@ export default function AppClient() {
           {/* Nav */}
           <nav className="p-2 space-y-0.5 mt-1">
             {navItems.map(({ key, icon: Icon, label, badge }) => (
-              <button key={key} onClick={() => setTab(key)}
+              <button key={key} onClick={() => { setTab(key); setNavOpen(false); }}
                 className={cls('w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
                   tab === key ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}>
                 <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -704,26 +712,32 @@ export default function AppClient() {
       <main className="flex-1 flex flex-col overflow-hidden">
 
         {/* Topbar */}
-        <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-sm font-extrabold text-slate-900">{navItems.find(n => n.key === tab)?.label}</h2>
-            <p className="text-[11px] text-slate-400">{me?.ofName || '…'} · 32 indicateurs Qualiopi</p>
+        <header className="bg-white border-b border-slate-100 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => setNavOpen(true)} aria-label="Ouvrir le menu"
+              className="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 shrink-0">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-sm font-extrabold text-slate-900 truncate">{navItems.find(n => n.key === tab)?.label}</h2>
+              <p className="text-[11px] text-slate-400 truncate">{me?.ofName || '…'} · 32 indicateurs Qualiopi</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {openRec > 0 && (
               <button onClick={() => setTab('reclamations')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-full text-[10px] font-bold animate-pulse">
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-full text-[10px] font-bold animate-pulse">
                 <Bell className="w-3 h-3" /> {openRec} réclamation{openRec > 1 ? 's' : ''} ouverte{openRec > 1 ? 's' : ''}
               </button>
             )}
-            <button onClick={exportDossier}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-full text-[10px] font-bold hover:bg-emerald-700 transition">
-              <Download className="w-3 h-3" /> Dossier d&apos;audit
+            <button onClick={exportDossier} title="Exporter le dossier d'audit"
+              className="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 bg-emerald-600 text-white rounded-full text-[10px] font-bold hover:bg-emerald-700 transition">
+              <Download className="w-3 h-3" /> <span className="hidden sm:inline">Dossier d&apos;audit</span>
             </button>
             <div className={cls('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border',
               readiness >= 90 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : readiness >= 70 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-red-50 text-red-700 border-red-200')}>
               <span className={cls('w-2 h-2 rounded-full', readiness >= 90 ? 'bg-emerald-500 animate-pulse' : readiness >= 70 ? 'bg-amber-500' : 'bg-red-500')} />
-              {readiness}% audit-ready
+              {readiness}%<span className="hidden sm:inline">&nbsp;audit-ready</span>
             </div>
           </div>
         </header>
@@ -744,7 +758,7 @@ export default function AppClient() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-5">
 
           {dbError && (
             <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">
@@ -813,7 +827,7 @@ export default function AppClient() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Sessions récentes */}
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <p className="text-xs font-extrabold text-slate-900">Sessions récentes</p>
                     <button onClick={() => setTab('sessions')} className="text-[10px] text-emerald-600 font-bold hover:underline">Tout voir →</button>
                   </div>
@@ -914,7 +928,7 @@ export default function AppClient() {
           {tab === 'sessions' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center gap-3">
                   <div className="flex-1 flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
                     <Search className="w-3.5 h-3.5 text-slate-400" />
                     <input className="flex-1 text-xs bg-transparent outline-none placeholder-slate-400" placeholder="Rechercher une session…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -928,7 +942,7 @@ export default function AppClient() {
                     const done = Object.values(s.docs).filter(Boolean).length;
                     return (
                       <div key={s.id} onClick={() => setSelectedSessionId(s.id === selectedSessionId ? null : s.id)}
-                        className={cls('px-6 py-4 flex items-center gap-4 cursor-pointer transition group',
+                        className={cls('px-4 md:px-6 py-4 flex items-center gap-4 cursor-pointer transition group',
                           selectedSessionId === s.id ? 'bg-emerald-50 border-l-4 border-l-emerald-600' : 'border-l-4 border-l-transparent hover:bg-slate-50')}>
                         <div className="flex-1 min-w-0">
                           <p className="font-extrabold text-xs text-slate-900 truncate">{s.title}</p>
@@ -1112,7 +1126,7 @@ export default function AppClient() {
           {/* ══════════════ STAGIAIRES ══════════════ */}
           {tab === 'trainees' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-xs font-extrabold text-slate-900">Registre des stagiaires</h3>
                 <button onClick={() => openModal('trainee', emptyTrainee)} className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}>
                   <Plus className="w-3.5 h-3.5" /> Ajouter
@@ -1121,9 +1135,9 @@ export default function AppClient() {
               <div className="divide-y divide-slate-50">
                 {trainees.map(t => (
                   <div key={t.id}>
-                    <div className="px-6 py-4 flex items-center gap-4 group">
+                    <div className="px-4 md:px-6 py-4 flex flex-wrap items-center gap-3 group">
                       <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-black text-emerald-700 shrink-0">{t.first[0]}{t.last[0]}</div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-[140px]">
                         <p className="font-bold text-xs text-slate-900">{t.first} {t.last}</p>
                         <p className="text-[10px] text-slate-400">{t.email} · {t.phone}</p>
                         {t.disability && (
@@ -1132,7 +1146,7 @@ export default function AppClient() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-2 md:gap-3 shrink-0 ml-auto flex-wrap justify-end">
                         <span className={cls('text-[10px] font-bold px-2.5 py-1 rounded-xl border', t.score !== 'Non fait' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-100')}>
                           Positionnement : {t.score}
                         </span>
@@ -1177,13 +1191,13 @@ export default function AppClient() {
                 <KpiCard label="Recommandation" value="92%" icon={TrendingUp} color="emerald" />
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
+                <div className="px-4 md:px-6 py-4 border-b border-slate-100">
                   <h3 className="text-xs font-extrabold text-slate-900">Évaluations individuelles (à chaud & à froid)</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Indicateurs 13 & 14 Qualiopi</p>
                 </div>
                 <div className="divide-y divide-slate-50">
                   {trainees.map(t => (
-                    <div key={t.id} className="px-6 py-4 flex items-center gap-4">
+                    <div key={t.id} className="px-4 md:px-6 py-4 flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-black text-emerald-700 shrink-0">{t.first[0]}{t.last[0]}</div>
                       <p className="text-xs font-semibold text-slate-800 flex-1">{t.first} {t.last}</p>
                       <div className="flex items-center gap-6">
@@ -1211,13 +1225,13 @@ export default function AppClient() {
 
               {satResponses.length > 0 && (
                 <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100">
+                  <div className="px-4 md:px-6 py-4 border-b border-slate-100">
                     <h3 className="text-xs font-extrabold text-slate-900">Commentaires des stagiaires</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">Verbatims déposés via l&apos;espace stagiaire</p>
                   </div>
                   <div className="divide-y divide-slate-50">
                     {satResponses.map((r, i) => (
-                      <div key={i} className="px-6 py-4">
+                      <div key={i} className="px-4 md:px-6 py-4">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-bold text-slate-900">{r.first} {r.last}</span>
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">{r.kind === 'froid' ? 'À froid' : 'À chaud'}</span>
@@ -1238,7 +1252,7 @@ export default function AppClient() {
           {/* ══════════════ VEILLES ══════════════ */}
           {tab === 'veilles' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">Veilles réglementaires & sectorielles</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Indicateurs 23 & 24 — Traçabilité et exploitation</p>
@@ -1278,7 +1292,7 @@ export default function AppClient() {
           {/* ══════════════ RÉCLAMATIONS ══════════════ */}
           {tab === 'reclamations' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">Registre des réclamations</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Indicateurs 30 & 31 — Traitement et suivi</p>
@@ -1321,7 +1335,7 @@ export default function AppClient() {
           {/* ══════════════ PAC ══════════════ */}
           {tab === 'pac' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">Plan d'Amélioration Continue (PAC)</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Indicateur 32 — Actions correctives et préventives</p>
@@ -1332,7 +1346,7 @@ export default function AppClient() {
               </div>
               <div className="divide-y divide-slate-50">
                 {pac.map(p => (
-                  <div key={p.id} className="px-6 py-4 flex items-start gap-4 group">
+                  <div key={p.id} className="px-4 md:px-6 py-4 flex items-start gap-4 group">
                     <div className={cls('w-2 h-2 rounded-full mt-1.5 shrink-0', p.status === 'Terminé' ? 'bg-emerald-500' : p.status === 'En cours' ? 'bg-blue-500' : 'bg-slate-300')} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-900">{p.action}</p>
@@ -1400,7 +1414,7 @@ export default function AppClient() {
           {/* ══════════════ CRM ══════════════ */}
           {tab === 'crm' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-900">CRM — Clients & Financeurs</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Prescripteurs, OPCO, entreprises clientes</p>
@@ -1411,7 +1425,7 @@ export default function AppClient() {
               </div>
               <div className="divide-y divide-slate-50">
                 {clients.map(c => (
-                  <div key={c.id} className="px-6 py-4 flex items-center gap-4 group">
+                  <div key={c.id} className="px-4 md:px-6 py-4 flex items-center gap-4 group">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
                       <Building2 className="w-4.5 h-4.5 text-slate-400" />
                     </div>
@@ -1442,7 +1456,7 @@ export default function AppClient() {
                 <KpiCard label="En attente" value={devis.filter(d => d.status === 'En attente').length} icon={Clock} color="amber" />
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-xs font-extrabold text-slate-900">Devis & Factures</h3>
                   <button onClick={() => openModal('devis', emptyDevis)} className={cls(btn, 'bg-emerald-600 text-white hover:bg-emerald-700')}>
                     <Plus className="w-3.5 h-3.5" /> Nouveau devis
@@ -1450,7 +1464,7 @@ export default function AppClient() {
                 </div>
                 <div className="divide-y divide-slate-50">
                   {devis.map(d => (
-                    <div key={d.id} className="px-6 py-4 flex items-center gap-4 group">
+                    <div key={d.id} className="px-4 md:px-6 py-4 flex items-center gap-4 group">
                       <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                         <CreditCard className="w-4 h-4 text-emerald-500" />
                       </div>
@@ -1488,7 +1502,7 @@ export default function AppClient() {
                 <KpiCard label="Prêt pour l'audit" value={readiness >= 90 ? 'Oui' : 'Bientôt'} icon={CheckCircle2} color={readiness >= 90 ? 'emerald' : 'amber'} />
               </div>
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-extrabold text-slate-900">Copilote IA — écarts prioritaires</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">Preuves manquantes détectées automatiquement dans vos données</p>
@@ -1502,7 +1516,7 @@ export default function AppClient() {
                     <p className="text-xs text-center text-emerald-600 py-12 font-semibold">Tous les indicateurs sont conformes. Vous êtes prêt pour l&apos;audit.</p>
                   )}
                   {gaps.map(i => (
-                    <div key={i.id} className="px-6 py-4 flex items-start gap-4">
+                    <div key={i.id} className="px-4 md:px-6 py-4 flex items-start gap-4">
                       <span className={cls('w-2 h-2 rounded-full mt-1.5 shrink-0', IND_STATUS[i.status].dot)} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1602,7 +1616,7 @@ export default function AppClient() {
 
               {/* Coffre-fort de preuves */}
               <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
+                <div className="px-4 md:px-6 py-4 border-b border-slate-100">
                   <h3 className="text-xs font-extrabold text-slate-900">Coffre-fort de preuves</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">{documents.length} document(s) analysé(s)</p>
                 </div>
@@ -1635,7 +1649,7 @@ export default function AppClient() {
           {/* ══════════════ DOCUMENTS TYPES ══════════════ */}
           {tab === 'documents' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
+              <div className="px-4 md:px-6 py-4 border-b border-slate-100">
                 <h3 className="text-xs font-extrabold text-slate-900">Bibliothèque de modèles conformes</h3>
                 <p className="text-[10px] text-slate-400 mt-0.5">{TEMPLATES.length} modèles Qualiopi · {new Set(TEMPLATES.flatMap(t => t.indicators)).size}/32 indicateurs couverts — téléchargeables en PDF et Word.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
